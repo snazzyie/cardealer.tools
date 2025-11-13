@@ -30,7 +30,6 @@ INSERT INTO users (
     first_name,
     last_name,
     user_type,
-    permission_level,
     created_date
 ) VALUES (
     1,
@@ -38,13 +37,12 @@ INSERT INTO users (
     '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
     'Super',
     'Admin',
-    3,
     10,
     NOW()
 );
 
 -- Verify installation
-SELECT user_id, email, first_name, last_name, permission_level FROM users;
+SELECT user_id, email, first_name, last_name, user_type FROM users;
 SELECT company_id, company_name, subdomain, status, trial_ends_at FROM core_company;
 
 -- SUCCESS! You can now login at /login

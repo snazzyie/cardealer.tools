@@ -90,7 +90,7 @@ $customers = fn_core_database_rows("SELECT customer_id, first_name, last_name, e
 
 // Get technicians (staff users)
 $technicians = fn_core_database_rows("SELECT user_id, first_name, last_name
-                                        FROM users WHERE company_id = ? AND permission_level >= 2 ORDER BY first_name, last_name", [$company_id]);
+                                        FROM users WHERE company_id = ? AND user_type >= 2 ORDER BY first_name, last_name", [$company_id]);
 
 // Get service items for quick add
 $service_items = fn_service_items_get_all($company_id, 'all');

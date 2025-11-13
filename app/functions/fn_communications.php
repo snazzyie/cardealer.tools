@@ -332,6 +332,30 @@ function fn_email_template_get_by_slug($slug, $companyId = null) {
 }
 
 /**
+ * Get email template by ID
+ *
+ * @param int $templateId Template ID
+ * @param int $companyId Company ID
+ * @return array|false Template data
+ */
+function fn_email_template_get($templateId, $companyId) {
+    $query = "SELECT * FROM email_templates WHERE template_id = ? AND company_id = ?";
+    return fn_core_database_row($query, [$templateId, $companyId]);
+}
+
+/**
+ * Delete email template
+ *
+ * @param int $templateId Template ID
+ * @param int $companyId Company ID
+ * @return bool Success
+ */
+function fn_email_template_delete($templateId, $companyId) {
+    $query = "DELETE FROM email_templates WHERE template_id = ? AND company_id = ?";
+    return fn_core_edit_row_no_redirect($query, [$templateId, $companyId]);
+}
+
+/**
  * Get all email templates
  *
  * @param int $companyId Company ID

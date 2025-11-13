@@ -95,7 +95,9 @@ function fn_core_get_routes() {
         // Communications
         '/inbox' => 'inbox/inbox',
         '/inbox/view' => 'inbox/view',
-        '/email-templates' => 'communications/templates',
+        '/email-templates' => 'communications/email-templates',
+        '/email-template/new' => 'communications/email-template-form',
+        '/email-template/edit' => 'communications/email-template-form',
 
         // Customers
         '/customers' => 'customers/customers',

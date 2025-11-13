@@ -17,6 +17,16 @@ function fn_company_get($companyId) {
 }
 
 /**
+ * Get company by ID (alias for fn_company_get)
+ *
+ * @param int $companyId Company ID
+ * @return array|null Company data or null
+ */
+function fn_company_get_by_id($companyId) {
+    return fn_company_get($companyId);
+}
+
+/**
  * Get company by subdomain
  *
  * @param string $subdomain Subdomain

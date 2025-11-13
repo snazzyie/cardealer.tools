@@ -53,18 +53,17 @@ if (empty($firstName) || empty($lastName)) {
         // Create enquiry
         $enquiryData = [
             'company_id' => $company_id,
+            'vehicle_id' => $vehicleId,
+            'enquiry_type' => 'test-drive',
             'first_name' => $firstName,
             'last_name' => $lastName,
-            'email' => $email,
-            'phone' => $phone,
-            'vehicle_id' => $vehicleId,
-            'enquiry_type' => 'test_drive',
-            'preferred_date' => $preferredDate,
-            'preferred_time' => $preferredTime,
+            'customer_email' => $email,
+            'customer_phone' => $phone,
+            'test_drive_date' => $preferredDate,
+            'test_drive_time' => $preferredTime,
             'message' => $message,
             'source' => 'website',
-            'status' => 'new',
-            'created_date' => date('Y-m-d H:i:s')
+            'status' => 'new'
         ];
 
         $enquiry_id = fn_core_create_row('enquiries', $enquiryData, 'enquiry_id');
@@ -78,15 +77,16 @@ if (empty($firstName) || empty($lastName)) {
                 'customer_name' => "{$firstName} {$lastName}",
                 'customer_email' => $email,
                 'customer_phone' => $phone,
-                'appointment_type' => 'test_drive',
+                'appointment_type' => 'test-drive',
                 'vehicle_id' => $vehicleId,
-                'start_time' => $preferredDate . ' ' . ($preferredTime ?: '10:00:00'),
-                'end_time' => date('Y-m-d H:i:s', strtotime($preferredDate . ' ' . ($preferredTime ?: '10:00:00') . ' +1 hour')),
+                'start_datetime' => $preferredDate . ' ' . ($preferredTime ?: '10:00:00'),
+                'end_datetime' => date('Y-m-d H:i:s', strtotime($preferredDate . ' ' . ($preferredTime ?: '10:00:00') . ' +1 hour')),
+                'assigned_to' => 1, // Default to first user
                 'status' => 'scheduled',
                 'notes' => $message
             ];
 
-            fn_calendar_create_appointment($appointmentData);
+            fn_calendar_create_appointment($company_id, $appointmentData);
 
             // Send notification to company
             $emailBody = "New test drive booking:\n\n";

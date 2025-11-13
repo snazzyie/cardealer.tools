@@ -4,6 +4,7 @@
  * Checks if all required tables exist and match schema
  */
 
+define('BASE_PATH', __DIR__ . '/');
 require __DIR__ . '/app/functions/fn_core_database.php';
 
 $config = require __DIR__ . '/config.php';

@@ -56,3 +56,25 @@ function fn_email_send_enquiry_notification($enquiryId) {
     // TODO: Implement enquiry notification
     return true;
 }
+
+/**
+ * Send email (core wrapper function)
+ *
+ * @param array $emailData Email data array with keys: to, subject, body, from (optional), company_id (optional)
+ * @return bool Success status
+ */
+function fn_core_email_send($emailData) {
+    // Extract parameters
+    $to = $emailData['to'] ?? '';
+    $subject = $emailData['subject'] ?? '';
+    $body = $emailData['body'] ?? '';
+    $from = $emailData['from'] ?? null;
+
+    if (empty($to) || empty($subject) || empty($body)) {
+        error_log("fn_core_email_send: Missing required parameters");
+        return false;
+    }
+
+    // Use the existing email send function
+    return fn_email_send($to, $subject, $body);
+}

@@ -646,3 +646,81 @@ function fn_calendar_google_disconnect($userId) {
 
     return fn_core_edit_row_no_redirect($query, [$userId]);
 }
+
+/**
+ * Cancel appointment
+ *
+ * @param int $appointmentId Appointment ID
+ * @param int $companyId Company ID
+ * @return bool Success
+ */
+function fn_calendar_cancel_appointment($appointmentId, $companyId) {
+    return fn_calendar_update_status($appointmentId, $companyId, 'cancelled');
+}
+
+/**
+ * Send appointment cancellation email
+ *
+ * @param int $appointmentId Appointment ID
+ * @return bool Success
+ */
+function fn_calendar_send_appointment_cancellation($appointmentId) {
+    // Get appointment details
+    $appointment = fn_core_database_row(
+        "SELECT a.*, c.email as customer_email, c.first_name, c.last_name,
+         v.make, v.model, v.year,
+         comp.company_name, comp.company_email
+         FROM calendar_appointments a
+         LEFT JOIN customers c ON a.customer_id = c.customer_id
+         LEFT JOIN vehicles v ON a.vehicle_id = v.vehicle_id
+         LEFT JOIN core_company comp ON a.company_id = comp.company_id
+         WHERE a.appointment_id = ?",
+        [$appointmentId]
+    );
+
+    if (!$appointment || empty($appointment['customer_email'])) {
+        return false;
+    }
+
+    // Format appointment date/time
+    $appointmentDate = date('l, F j, Y', strtotime($appointment['start_datetime']));
+    $appointmentTime = date('g:i A', strtotime($appointment['start_datetime']));
+
+    // Prepare email content
+    $subject = 'Appointment Cancellation - ' . $appointment['company_name'];
+
+    $body = "Dear " . $appointment['first_name'] . ",\n\n";
+    $body .= "Your appointment has been cancelled.\n\n";
+    $body .= "Cancelled Appointment Details:\n";
+    $body .= "Date: " . $appointmentDate . "\n";
+    $body .= "Time: " . $appointmentTime . "\n";
+
+    if ($appointment['appointment_type']) {
+        $types = [
+            'test-drive' => 'Test Drive',
+            'service' => 'Service Appointment',
+            'consultation' => 'Sales Consultation',
+            'vehicle-viewing' => 'Vehicle Viewing'
+        ];
+        $body .= "Type: " . ($types[$appointment['appointment_type']] ?? 'Appointment') . "\n";
+    }
+
+    if ($appointment['make'] && $appointment['model']) {
+        $body .= "Vehicle: " . $appointment['year'] . " " . $appointment['make'] . " " . $appointment['model'] . "\n";
+    }
+
+    $body .= "\nIf you would like to reschedule, please contact us.\n\n";
+    $body .= "Best regards,\n";
+    $body .= $appointment['company_name'];
+
+    // Send email using the email function
+    $emailData = [
+        'to' => $appointment['customer_email'],
+        'from' => $appointment['company_email'],
+        'subject' => $subject,
+        'body' => $body,
+        'company_id' => $appointment['company_id']
+    ];
+
+    return fn_email_send_with_template($emailData);
+}

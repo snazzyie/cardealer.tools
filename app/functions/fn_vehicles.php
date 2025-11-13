@@ -312,6 +312,34 @@ function fn_vehicles_get_makes($companyId) {
 }
 
 /**
+ * Get unique makes for a company (returns array of strings, not associative array)
+ *
+ * @param int $companyId Company ID
+ * @return array Array of make strings
+ */
+function fn_vehicles_get_unique_makes($companyId) {
+    $results = fn_vehicles_get_makes($companyId);
+    $makes = [];
+    foreach ($results as $row) {
+        if (!empty($row['make'])) {
+            $makes[] = $row['make'];
+        }
+    }
+    return $makes;
+}
+
+/**
+ * Get single vehicle by ID (alias for fn_vehicles_get)
+ *
+ * @param int $vehicleId Vehicle ID
+ * @param int $companyId Company ID (for security)
+ * @return array|null Vehicle data
+ */
+function fn_vehicles_get_single($vehicleId, $companyId) {
+    return fn_vehicles_get($vehicleId, $companyId);
+}
+
+/**
  * Update vehicle status
  *
  * @param int $vehicleId Vehicle ID

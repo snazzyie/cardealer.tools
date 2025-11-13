@@ -516,3 +516,128 @@ function fn_crm_get_upcoming_tasks($userId, $days = 7) {
               ORDER BY t.due_date ASC";
     return fn_core_database_rows($query, [$userId, $days]);
 }
+
+/**
+ * ====================
+ * ADDITIONAL CRM FUNCTIONS
+ * ====================
+ */
+
+/**
+ * Add note to lead (alias for fn_crm_add_activity with type 'note')
+ *
+ * @param array $noteData Note data (lead_id, user_id, note)
+ * @return int|false Note ID or false
+ */
+function fn_crm_add_note($noteData) {
+    $leadId = $noteData['lead_id'];
+    $userId = $noteData['user_id'];
+    $note = $noteData['note'];
+
+    return fn_crm_add_activity($leadId, $userId, 'note', $note);
+}
+
+/**
+ * Count total leads for a company
+ *
+ * @param int $companyId Company ID
+ * @return int Count
+ */
+function fn_crm_count_leads($companyId) {
+    $query = "SELECT COUNT(*) as count FROM crm_leads WHERE company_id = ?";
+    $result = fn_core_database_row($query, [$companyId]);
+    return $result['count'] ?? 0;
+}
+
+/**
+ * Get lead activities (wrapper for fn_crm_get_activities)
+ *
+ * @param int $leadId Lead ID
+ * @return array Activities
+ */
+function fn_crm_get_lead_activities($leadId) {
+    return fn_crm_get_activities($leadId);
+}
+
+/**
+ * Get lead notes (activities of type 'note')
+ *
+ * @param int $leadId Lead ID
+ * @return array Notes
+ */
+function fn_crm_get_lead_notes($leadId) {
+    $query = "SELECT a.*, u.first_name, u.last_name
+              FROM crm_activities a
+              LEFT JOIN users u ON a.user_id = u.user_id
+              WHERE a.lead_id = ? AND a.activity_type = 'note'
+              ORDER BY a.activity_date DESC";
+    return fn_core_database_rows($query, [$leadId]);
+}
+
+/**
+ * Count activities by type for a company
+ *
+ * @param int $companyId Company ID
+ * @param string $activityType Activity type (call, email, meeting, note)
+ * @return int Count
+ */
+function fn_crm_count_activities_by_type($companyId, $activityType) {
+    $query = "SELECT COUNT(*) as count
+              FROM crm_activities a
+              JOIN crm_leads l ON a.lead_id = l.lead_id
+              WHERE l.company_id = ? AND a.activity_type = ?";
+    $result = fn_core_database_row($query, [$companyId, $activityType]);
+    return $result['count'] ?? 0;
+}
+
+/**
+ * Count activities today for a company
+ *
+ * @param int $companyId Company ID
+ * @return int Count
+ */
+function fn_crm_count_activities_today($companyId) {
+    $today = date('Y-m-d');
+    $query = "SELECT COUNT(*) as count
+              FROM crm_activities a
+              JOIN crm_leads l ON a.lead_id = l.lead_id
+              WHERE l.company_id = ? AND DATE(a.activity_date) = ?";
+    $result = fn_core_database_row($query, [$companyId, $today]);
+    return $result['count'] ?? 0;
+}
+
+/**
+ * Count activities this week for a company
+ *
+ * @param int $companyId Company ID
+ * @return int Count
+ */
+function fn_crm_count_activities_week($companyId) {
+    $weekStart = date('Y-m-d', strtotime('monday this week'));
+    $weekEnd = date('Y-m-d', strtotime('sunday this week'));
+    $query = "SELECT COUNT(*) as count
+              FROM crm_activities a
+              JOIN crm_leads l ON a.lead_id = l.lead_id
+              WHERE l.company_id = ?
+              AND DATE(a.activity_date) BETWEEN ? AND ?";
+    $result = fn_core_database_row($query, [$companyId, $weekStart, $weekEnd]);
+    return $result['count'] ?? 0;
+}
+
+/**
+ * Count activities this month for a company
+ *
+ * @param int $companyId Company ID
+ * @return int Count
+ */
+function fn_crm_count_activities_month($companyId) {
+    $monthStart = date('Y-m-01');
+    $monthEnd = date('Y-m-t');
+    $query = "SELECT COUNT(*) as count
+              FROM crm_activities a
+              JOIN crm_leads l ON a.lead_id = l.lead_id
+              WHERE l.company_id = ?
+              AND DATE(a.activity_date) BETWEEN ? AND ?";
+    $result = fn_core_database_row($query, [$companyId, $monthStart, $monthEnd]);
+    return $result['count'] ?? 0;
+}

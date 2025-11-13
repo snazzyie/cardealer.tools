@@ -190,6 +190,61 @@ function fn_core_execute_query($query, $params = []) {
 }
 
 /**
+ * Execute database query (alias for fn_core_execute_query)
+ *
+ * @param string $query SQL query
+ * @param array $params Parameters for prepared statement
+ * @return bool Success status
+ */
+function fn_core_database_query($query, $params = []) {
+    return fn_core_execute_query($query, $params);
+}
+
+/**
+ * Create row in table (wrapper for fn_core_insert_row_no_redirect)
+ *
+ * @param string $table Table name
+ * @param array $data Associative array of column => value
+ * @param string $primaryKey Primary key column name (default: 'id')
+ * @return int|false Last insert ID or false
+ */
+function fn_core_create_row($table, $data, $primaryKey = 'id') {
+    // Build column names and placeholders
+    $columns = array_keys($data);
+    $placeholders = array_fill(0, count($columns), '?');
+
+    $query = "INSERT INTO $table (" . implode(', ', $columns) . ")
+              VALUES (" . implode(', ', $placeholders) . ")";
+
+    return fn_core_insert_row_no_redirect($query, array_values($data));
+}
+
+/**
+ * Update row in table (wrapper for fn_core_edit_row_no_redirect)
+ *
+ * @param string $table Table name
+ * @param int $id Primary key value
+ * @param array $data Associative array of column => value
+ * @param string $primaryKey Primary key column name (default: 'id')
+ * @return int Number of affected rows
+ */
+function fn_core_update_row($table, $id, $data, $primaryKey = 'id') {
+    // Build SET clause
+    $setParts = [];
+    foreach (array_keys($data) as $column) {
+        $setParts[] = "$column = ?";
+    }
+
+    $query = "UPDATE $table SET " . implode(', ', $setParts) .
+             " WHERE $primaryKey = ?";
+
+    $params = array_values($data);
+    $params[] = $id;
+
+    return fn_core_edit_row_no_redirect($query, $params);
+}
+
+/**
  * Begin database transaction
  *
  * @return PDO

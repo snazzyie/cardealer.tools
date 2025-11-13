@@ -1,0 +1,220 @@
+# Car Dealer SaaS Platform
+
+A comprehensive multi-tenant car dealership management platform built with PHP. Manage your dealership's inventory, customers, sales, and operations all in one place.
+
+## 🚀 Features
+
+### Phase 1: Foundation
+- **Authentication System** - Secure login, registration, session management
+- **User Management** - 5-tier permission system (Guest, Registered, Company, Paid, Super Admin)
+- **Dashboard** - Stats overview with vehicles, leads, enquiries, and sales
+- **Error Pages** - Professional 403, 404, 500 error handling
+
+### Phase 2: Company Management
+- **Company Profiles** - Complete business information management
+- **Multi-Tenancy** - Subdomain and custom domain support
+- **Branding** - Logo, colors, social media customization
+- **Trial System** - 14-day trial with status tracking
+
+### Phase 3: Vehicle Inventory
+- **Vehicle Management** - Complete CRUD with 36 specification fields
+- **Image Gallery** - Multiple images per vehicle with primary image selection
+- **Search & Filters** - Advanced filtering by make, fuel, transmission, price, etc.
+- **Status Tracking** - Available, reserved, sold, coming soon
+- **Featured Listings** - Highlight premium vehicles
+
+### Phase 4: Public Website
+- **Vehicle Listings** - Branded public-facing vehicle catalog
+- **Advanced Search** - Filter by make, fuel type, transmission, price range
+- **Responsive Design** - Mobile-first Bootstrap 5 interface
+- **Company Branding** - Automatic logo, colors, contact info display
+
+### Phase 5: Enquiry System
+- **Contact Forms** - Vehicle enquiry forms on detail pages
+- **Auto Lead Creation** - Enquiries automatically become CRM leads
+- **Customer Tracking** - Email, phone, vehicle interest captured
+
+### Phase 6: CRM & Lead Management
+- **Sales Pipeline** - 7-stage Kanban board (New → Won/Lost)
+- **Lead Tracking** - Customer information, vehicle interest, notes
+- **Staff Assignment** - Assign leads to sales team members
+- **Conversion Analytics** - Win/loss tracking and conversion rates
+- **Activity History** - Log all interactions with leads
+
+### Phase 7: Calendar & Appointments
+- **Monthly Calendar** - Visual calendar grid with all appointments
+- **Appointment Booking** - Schedule test drives, consultations, viewings
+- **Availability Checking** - Prevent double-booking
+- **Customer Management** - Auto-create customer records
+- **Staff Assignment** - Assign appointments to sales staff
+- **Google Calendar Ready** - Integration placeholders included
+
+### Phase 9: Invoicing & Payments
+- **Sales Invoices** - Vehicle sale invoices with trade-ins, deposits, VAT
+- **Service Invoices** - Line-item service and repair invoices
+- **Auto-Numbering** - Generate unique invoice numbers (SALE-202411-0001)
+- **Payment Tracking** - Status management (pending, sent, paid, cancelled)
+- **Revenue Analytics** - Sales, pending payments, service revenue
+- **Stripe Ready** - Deposit recording system
+
+### Phase 10: Unified Inbox
+- **Communications Hub** - All customer messages in one place
+- **Multi-Source** - Aggregates enquiries and leads
+- **Message Preview** - Quick view of all communications
+- **Quick Actions** - Navigate to full enquiry/lead details
+- **Integration Ready** - Postmark, Twilio, WhatsApp placeholders
+
+## 📋 Technical Stack
+
+- **Backend:** PHP 8.0+ (Procedural, no framework)
+- **Database:** MySQL 8.0+ with PDO
+- **Frontend:** Bootstrap 5, Vanilla JS
+- **Icons:** Bootstrap Icons
+- **Architecture:** Multi-tenant with company isolation
+- **Routing:** Simple array-based routing
+- **Security:** Prepared statements, password hashing, CSRF protection
+
+## 🗄️ Database Schema
+
+26 tables including:
+- `users` - User accounts with permission levels
+- `core_company` - Dealer company profiles
+- `vehicles` - Vehicle inventory (36 fields)
+- `vehicle_images` - Image gallery
+- `crm_leads` - Sales pipeline
+- `crm_activities` - Lead interaction history
+- `calendar_appointments` - Appointment scheduling
+- `customers` - Customer database
+- `sales_invoices` - Vehicle sale invoices
+- `service_invoices` - Service/repair invoices
+- `service_items` - Invoice line items
+- `vehicle_deposits` - Stripe deposit tracking
+- `enquiries` - Website enquiries
+- `communications` - Unified inbox messages
+- `email_templates` - Email automation templates
+
+## 🚦 Installation
+
+1. **Database Setup:**
+   ```bash
+   mysql -u root -p < database_install.sql
+   ```
+
+2. **Configuration:**
+   Update `config.php` with your database credentials:
+   ```php
+   'database' => [
+       'host' => 'localhost',
+       'dbname' => 'cardealer_saas',
+       'username' => 'your_username',
+       'password' => 'your_password',
+   ]
+   ```
+
+3. **Web Server:**
+   Point your web server to the `public/` directory.
+   Apache `.htaccess` file is included for URL rewriting.
+
+4. **File Permissions:**
+   ```bash
+   chmod 755 app/
+   chmod 755 public/
+   ```
+
+## 🔐 User Roles
+
+- **0 - Guest:** Public access only
+- **1 - Registered:** Basic dashboard access
+- **2 - Company:** Full dealership management
+- **3 - Paid:** Premium features (subscriptions)
+- **10 - Super Admin:** Platform administration
+
+## 🎨 Customization
+
+Each company can customize:
+- Logo and favicon
+- Primary and secondary colors
+- Social media links (Facebook, Instagram, Twitter, LinkedIn)
+- Subdomain (dealer.cardealer.tools)
+- Custom domain support
+
+## 📊 Key Metrics
+
+- **Total Files:** 50+ PHP files
+- **Lines of Code:** ~5,000+ lines
+- **Database Tables:** 26 tables
+- **Function Libraries:** 6 modules (core, company, vehicles, CRM, calendar, invoices)
+- **Admin Views:** 12 modules
+- **Public Views:** 3 pages
+
+## 🔗 Integration Ready
+
+The platform includes placeholders for:
+- **Postmark** - Email automation
+- **Stripe** - Payment processing and deposits
+- **Google Calendar** - Appointment sync
+- **Twilio** - SMS notifications
+- **WhatsApp Business API** - Customer messaging
+- **Google Analytics** - Tracking
+
+## 📱 Multi-Tenant Architecture
+
+Each dealer company operates independently with:
+- Unique subdomain (dealer1.cardealer.tools)
+- Custom domain support (www.dealer1.com)
+- Isolated data (all queries filtered by company_id)
+- Individual branding
+- Separate user teams
+
+## 🎯 Target Users
+
+- Independent car dealers
+- Small to medium dealership groups
+- Used car dealers
+- Vehicle brokers
+- Dealerships wanting to digitize operations
+
+## 💡 Business Model
+
+- **Trial:** 14-day free trial for new dealers
+- **Subscription:** Monthly/annual subscription plans
+- **Multi-Location:** Support for dealer groups
+- **White Label:** Custom branding per dealer
+
+## 📈 Roadmap (Future Enhancements)
+
+- Email template editor
+- SMS campaign management
+- WhatsApp integration
+- Finance calculator widget
+- Part-exchange valuation tool
+- Vehicle import from third-party APIs
+- Advanced reporting and analytics
+- Mobile app (iOS/Android)
+- API for third-party integrations
+
+## 🛡️ Security Features
+
+- Password hashing (bcrypt)
+- Prepared SQL statements (PDO)
+- Session timeout (1 hour)
+- Session regeneration on login
+- Company-based data isolation
+- HTTPS ready
+- Input sanitization
+- XSS protection
+
+## 📞 Support
+
+For setup or customization support, contact your development team.
+
+## 📄 License
+
+Proprietary - All rights reserved
+
+---
+
+**Built with ❤️ for modern car dealerships**
+
+Launch Date: November 2025
+Version: 1.0.0

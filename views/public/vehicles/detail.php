@@ -266,6 +266,9 @@
                             </ul>
                         </div>
                     </div>
+
+                    <!-- Finance Calculator -->
+                    <?php include BASE_PATH . 'views/public/vehicles/finance-widget.php'; ?>
                 </div>
             </div>
 

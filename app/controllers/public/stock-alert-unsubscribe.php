@@ -3,6 +3,17 @@
  * Public Stock Alert Unsubscribe
  */
 
+// Get company from constant (set by public routing)
+if (!defined('PUBLIC_SITE_COMPANY')) {
+    http_response_code(500);
+    echo '<h1>500 - Server Error</h1>';
+    echo '<p>Company context not found.</p>';
+    exit;
+}
+
+$company_data = PUBLIC_SITE_COMPANY;
+$company_id = PUBLIC_SITE_COMPANY_ID;
+
 $token = $_GET['token'] ?? '';
 $success = false;
 $error = '';

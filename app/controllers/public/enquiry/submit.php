@@ -4,13 +4,16 @@
  * Handle general vehicle enquiries
  */
 
-// Get company from subdomain or domain
-$company_id = fn_core_get_company_from_domain();
-
-if (!$company_id) {
-    header("Location: /");
+// Get company from constant (set by public routing)
+if (!defined('PUBLIC_SITE_COMPANY')) {
+    http_response_code(500);
+    echo '<h1>500 - Server Error</h1>';
+    echo '<p>Company context not found.</p>';
     exit;
 }
+
+$company_data = PUBLIC_SITE_COMPANY;
+$company_id = PUBLIC_SITE_COMPANY_ID;
 
 // Must be POST request
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -54,9 +57,6 @@ if (empty($firstName) || empty($lastName)) {
     $enquiry_id = fn_core_create_row('enquiries', $enquiryData, 'enquiry_id');
 
     if ($enquiry_id) {
-        // Get company data for emails
-        $company_data = fn_company_get($company_id);
-
         // Get vehicle details if provided
         $vehicle = null;
         if ($vehicleId) {

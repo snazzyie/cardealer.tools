@@ -3,21 +3,16 @@
  * Public Contact Page Controller
  */
 
-// Get company from subdomain or domain
-$company_id = fn_core_get_company_from_domain();
-
-if (!$company_id) {
-    header("Location: /");
+// Get company from constant (set by public routing)
+if (!defined('PUBLIC_SITE_COMPANY')) {
+    http_response_code(500);
+    echo '<h1>500 - Server Error</h1>';
+    echo '<p>Company context not found.</p>';
     exit;
 }
 
-// Get company data
-$company_data = fn_company_get($company_id);
-
-if (!$company_data) {
-    header("Location: /");
-    exit;
-}
+$company_data = PUBLIC_SITE_COMPANY;
+$company_id = PUBLIC_SITE_COMPANY_ID;
 
 $error = null;
 $success = null;

@@ -229,3 +229,42 @@ function fn_core_is_current_route($route) {
     $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     return $uri === $route;
 }
+
+/**
+ * Route public dealer website requests
+ *
+ * @param string $uri Current URI path
+ * @param array $company Company data
+ */
+function fn_core_route_public($uri, $company) {
+    // Define public routes
+    $public_routes = [
+        '/' => 'public/vehicles/index',
+        '/cars' => 'public/vehicles/index',
+        '/car' => 'public/vehicles/detail',
+        '/about' => 'public/about/index',
+        '/contact' => 'public/contact/index',
+        '/finance' => 'public/finance/index',
+        '/enquiry/submit' => 'public/enquiry/submit',
+        '/test-drive' => 'public/enquiry/test-drive',
+        '/trade-in' => 'public/trade-in/index',
+        '/stock-alert' => 'public/stock-alert-register',
+        '/stock-alert/unsubscribe' => 'public/stock-alert-unsubscribe',
+    ];
+
+    // Check if exact route exists
+    if (array_key_exists($uri, $public_routes)) {
+        $controller = BASE_PATH . 'app/controllers/' . $public_routes[$uri] . '.php';
+
+        if (file_exists($controller)) {
+            require $controller;
+            return;
+        }
+    }
+
+    // 404 - Route not found
+    header("HTTP/1.0 404 Not Found");
+    echo '<h1>404 - Page Not Found</h1>';
+    echo '<p>The page you are looking for does not exist on this dealership website.</p>';
+    echo '<p><a href="/">Return to homepage</a></p>';
+}

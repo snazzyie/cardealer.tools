@@ -3,33 +3,16 @@
  * Public Vehicle Listings Controller
  */
 
-// Get company from subdomain or domain
-$host = $_SERVER['HTTP_HOST'];
-$company_data = null;
-
-// Check if it's a subdomain (e.g., dealer.cardealer.tools)
-if (strpos($host, '.cardealer.tools') !== false) {
-    $subdomain = explode('.', $host)[0];
-    if ($subdomain !== 'cardealer' && $subdomain !== 'www') {
-        $company_data = fn_company_get_by_subdomain($subdomain);
-    }
-} else {
-    // Check if it's a custom domain
-    $company_data = fn_company_get_by_domain($host);
-}
-
-// Fallback to first company for development
-if (!$company_data) {
-    $companies = fn_company_get_all(1, 0);
-    $company_data = $companies[0] ?? null;
-}
-
-if (!$company_data) {
-    echo "No dealer configured for this domain.";
+// Get company from constant (set by public routing)
+if (!defined('PUBLIC_SITE_COMPANY')) {
+    http_response_code(500);
+    echo '<h1>500 - Server Error</h1>';
+    echo '<p>Company context not found.</p>';
     exit;
 }
 
-$company_id = $company_data['company_id'];
+$company_data = PUBLIC_SITE_COMPANY;
+$company_id = PUBLIC_SITE_COMPANY_ID;
 
 // Get filters from query string
 $filters = ['status' => 'available']; // Only show available vehicles on public site

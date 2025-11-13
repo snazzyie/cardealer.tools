@@ -45,6 +45,7 @@ require BASE_PATH . 'app/functions/fn_calendar.php';
 require BASE_PATH . 'app/functions/fn_invoices.php';
 require BASE_PATH . 'app/functions/fn_service.php';
 require BASE_PATH . 'app/functions/fn_pdf.php';
+require BASE_PATH . 'app/functions/fn_stock_alerts.php';
 require BASE_PATH . 'app/functions/fn_subscriptions.php';
 require BASE_PATH . 'app/functions/fn_communications.php';
 

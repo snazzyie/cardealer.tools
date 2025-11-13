@@ -23,7 +23,8 @@ function fn_core_get_routes() {
         '/enquiry/submit' => 'public/enquiry/submit',
         '/test-drive' => 'public/enquiry/test-drive',
         '/trade-in' => 'public/trade-in/index',
-        '/stock-alert' => 'public/stock-alert/register',
+        '/stock-alert' => 'public/stock-alert-register',
+        '/stock-alert/unsubscribe' => 'public/stock-alert-unsubscribe',
 
         // Authentication
         '/login' => 'login/login',
@@ -99,6 +100,9 @@ function fn_core_get_routes() {
         // Customers
         '/customers' => 'customers/customers',
         '/customers/view' => 'customers/customers-view',
+
+        // Stock Alerts
+        '/stock-alerts' => 'stock-alerts/stock-alerts',
 
         // Website Settings
         '/website' => 'website/settings',

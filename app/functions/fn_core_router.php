@@ -82,6 +82,15 @@ function fn_core_get_routes() {
         '/deposits/new' => 'deposits/deposit-new',
         '/deposits/refund' => 'deposits/deposit-refund',
 
+        // Service Workshop
+        '/service/items' => 'service/service-items',
+        '/service/item/new' => 'service/service-item-form',
+        '/service/item/edit' => 'service/service-item-form',
+        '/service/invoices' => 'service/service-invoices',
+        '/service/invoice/new' => 'service/service-invoice-form',
+        '/service/invoice/edit' => 'service/service-invoice-form',
+        '/service/invoice/view' => 'service/service-invoice-view',
+
         // Communications
         '/inbox' => 'inbox/inbox',
         '/inbox/view' => 'inbox/view',

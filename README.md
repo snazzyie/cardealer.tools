@@ -13,17 +13,19 @@ A comprehensive multi-tenant car dealership management platform built with PHP. 
 - ✅ Twilio SMS integration
 - ✅ Postmark email automation
 - ✅ Invoice generation with PDF export
+- ✅ Service workshop management with parts & labor
+- ✅ Stock alerts system with email notifications
 - ✅ Subscription management (Stripe)
 - ✅ Unified communications inbox
 - ✅ Reports & analytics dashboard
 - ✅ Super admin platform management
 
 **Total Implementation:**
-- 75+ PHP files
-- 9,000+ lines of code
+- 80+ PHP files
+- 10,000+ lines of code
 - 27 database tables
-- 9 function libraries
-- 18+ admin modules
+- 10 function libraries
+- 20+ admin modules
 - Full SaaS billing & communications
 
 ## 🚀 Complete Feature List
@@ -104,14 +106,36 @@ A comprehensive multi-tenant car dealership management platform built with PHP. 
 - **Automated Workflows** - Enquiry notifications, abandoned follow-ups, reminders
 - **Communication Logging** - Full history of all customer interactions
 
-### Phase 11: Finance Calculator
+### Phase 11: Service Workshop Management
+- **Service Catalog** - Manage parts and labor services (SVC/PRT item codes)
+- **Stock Management** - Track parts inventory with low stock alerts
+- **Service Invoicing** - Create detailed service invoices with line items
+- **Labor & Parts Tracking** - Separate labor and parts with totals
+- **Technician Assignment** - Assign service jobs to staff members
+- **Work Orders** - Document work performed and service details
+- **Payment Tracking** - Monitor payment status (unpaid/partial/paid)
+- **PDF Generation** - Professional service invoice PDFs
+- **Revenue Reporting** - Service revenue statistics and analytics
+- **Supplier Management** - Track part suppliers and costs
+
+### Phase 12: Stock Alerts System
+- **Customer Subscriptions** - Allow customers to subscribe to vehicle alerts
+- **Multi-Criteria Matching** - Match by make, model, price, year, fuel, body type
+- **Email Notifications** - Automatic alerts when matching vehicles arrive
+- **Confirmation Emails** - Welcome emails with subscription details
+- **One-Click Unsubscribe** - Token-based unsubscribe system
+- **Admin Dashboard** - View and manage all stock alert subscriptions
+- **Statistics** - Track active alerts, notifications sent, unsubscribes
+- **Alert History** - Last notification timestamp for each alert
+
+### Phase 13: Finance Calculator
 - **Interactive Widget** - Real-time payment calculations on vehicle pages
 - **Amortization Formula** - Accurate monthly payment calculation
 - **Adjustable Parameters** - Deposit, APR, term length sliders
 - **Payment Breakdown** - Shows finance amount, interest, total payable
 - **Mobile Responsive** - Works on all device sizes
 
-### Phase 12: Reports & Analytics
+### Phase 14: Reports & Analytics
 - **Sales Reports** - Revenue tracking with date filtering
 - **Enquiry Analytics** - Lead source and conversion tracking
 - **Lead Pipeline Stats** - Breakdown by status (new, contacted, won, lost)
@@ -120,7 +144,7 @@ A comprehensive multi-tenant car dealership management platform built with PHP. 
 - **Conversion Rates** - Win/loss percentage tracking
 - **Date Range Filtering** - Custom date range analysis
 
-### Phase 13: Super Admin Dashboard
+### Phase 15: Super Admin Dashboard
 - **Platform Management** - Oversee all dealer companies
 - **System-Wide Stats** - Total companies, users, vehicles, leads
 - **Company Status Tracking** - Trial, active, suspended counts
@@ -205,12 +229,12 @@ Each company can customize:
 
 ## 📊 Key Metrics
 
-- **Total Files:** 75+ PHP files
-- **Lines of Code:** ~9,000+ lines
+- **Total Files:** 80+ PHP files
+- **Lines of Code:** ~10,000+ lines
 - **Database Tables:** 27 tables
-- **Function Libraries:** 9 modules (core, company, vehicles, CRM, calendar, invoices, subscriptions, communications, PDF)
-- **Admin Views:** 18+ modules (dashboard, vehicles, CRM, calendar, invoices, subscriptions, reports, inbox, super admin)
-- **Public Views:** 5 pages (home, vehicles, detail, finance calculator, finance partners)
+- **Function Libraries:** 10 modules (core, company, vehicles, CRM, calendar, invoices, service, PDF, stock alerts, communications)
+- **Admin Views:** 20+ modules (dashboard, vehicles, CRM, calendar, invoices, service, subscriptions, stock alerts, reports, inbox, super admin)
+- **Public Views:** 7 pages (home, vehicles, detail, finance calculator, finance partners, stock alerts, unsubscribe)
 
 ## 🔗 Live Integrations
 

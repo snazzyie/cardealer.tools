@@ -183,7 +183,154 @@ A multi-tenant Car Dealer SaaS platform built on PHP 8.2+ that enables multiple 
   - Heatmap integration (Hotjar, etc.)
   - Custom event tracking
 
-### 1.8 Admin Features
+### 1.8 CRM & Lead Management
+- **Lead Pipeline**
+  - Kanban board view (New, Contacted, Qualified, Negotiating, Won, Lost)
+  - Drag-and-drop lead status updates
+  - Lead scoring system
+  - Lead source tracking (Website, Phone, Walk-in, Referral, Facebook, etc.)
+  - Automated lead assignment rules
+  - Lead activity timeline
+  - Lead conversion tracking
+
+- **Contact Management**
+  - Unified customer/lead database
+  - Contact history (calls, emails, meetings, notes)
+  - Contact segmentation & tagging
+  - Duplicate detection & merging
+  - Bulk actions (assign, tag, export)
+  - Custom fields for contacts
+
+- **Communication Tracking**
+  - Email tracking (sent, opened, clicked)
+  - Call logging
+  - WhatsApp message history
+  - SMS message history
+  - Meeting notes
+  - Follow-up reminders
+  - Communication templates
+
+- **Task Management**
+  - Task creation & assignment
+  - Task due dates & priorities
+  - Task categories (Call, Email, Meeting, Follow-up)
+  - Task completion tracking
+  - Overdue task alerts
+  - Daily task digest emails
+
+### 1.9 Calendar & Appointments
+- **Appointment Booking**
+  - Test drive scheduling
+  - Service booking
+  - Sales consultation booking
+  - Vehicle viewing appointments
+  - Public booking widget (embed on website)
+  - Availability management per user
+  - Buffer time between appointments
+  - Booking confirmation emails
+
+- **Google Calendar Integration**
+  - Two-way sync with Google Calendar
+  - Automatic event creation in Google Calendar
+  - Update/delete sync
+  - Multi-user calendar support
+  - Calendar sharing
+  - Conflict detection
+  - Time zone handling
+
+- **Calendar Features**
+  - Day/Week/Month view
+  - Color-coded by appointment type
+  - Drag-and-drop rescheduling
+  - Appointment reminders (email, SMS, WhatsApp)
+  - Recurring appointments
+  - No-show tracking
+  - Cancellation management
+
+### 1.10 Invoicing & Payments
+- **Vehicle Sale Invoices**
+  - Automatic invoice generation on sale
+  - Invoice templates (customizable)
+  - Line items (vehicle, extras, delivery, trade-in deduction)
+  - VAT calculation (standard, margin, exempt)
+  - Deposit tracking
+  - Balance due calculation
+  - Payment status (Unpaid, Partial, Paid)
+  - Invoice PDF generation
+  - Email invoice to customer
+
+- **Service Invoices**
+  - Manual invoice creation
+  - Service item library (oil change, tire replacement, diagnostics, etc.)
+  - Parts inventory tracking
+  - Labor time tracking
+  - Hourly rates per technician
+  - Multiple payment methods
+  - Partial payment support
+  - Invoice history per customer
+
+- **Deposit Management (Stripe)**
+  - Take deposits to reserve vehicles
+  - Configurable deposit amounts (fixed or percentage)
+  - Stripe Payment Intent API
+  - Deposit refund workflow
+  - Deposit applied to final invoice
+  - Deposit expiry (auto-release after X days)
+  - Deposit receipt email
+
+- **Payment Processing**
+  - Stripe Terminal integration (card readers)
+  - Cash payments
+  - Bank transfer
+  - Finance company payments
+  - Split payments (deposit + balance)
+  - Payment history log
+  - Receipt generation
+
+### 1.11 Communication Hub
+- **Postmark CRM Integration**
+  - Automated email workflows
+  - Trigger emails on lead status change
+  - Abandoned enquiry follow-up (auto-email after 24h)
+  - New stock alerts (matching saved searches)
+  - Birthday/anniversary emails
+  - Service reminder emails (NCT/MOT due)
+  - Payment reminder emails
+  - Email templates with merge tags
+  - Email analytics (open rate, click rate)
+  - Suppression list management
+
+- **WhatsApp Integration**
+  - WhatsApp Business API integration
+  - Send messages to customers
+  - Template messages (approved by WhatsApp)
+  - Receive messages from customers
+  - WhatsApp chat widget on website
+  - Message templates (enquiry response, appointment confirmation, etc.)
+  - WhatsApp notification for new enquiries
+  - WhatsApp notification for appointments
+  - Media sharing (vehicle images, documents)
+
+- **SMS Integration (Twilio)**
+  - SMS notifications
+  - Appointment reminders via SMS
+  - Test drive confirmations
+  - Payment reminders
+  - Two-way SMS conversations
+  - SMS templates
+  - SMS delivery tracking
+  - Opt-out management
+
+- **Unified Inbox**
+  - All communication channels in one place
+  - Email, WhatsApp, SMS in single conversation view
+  - Assign conversations to staff
+  - Internal notes on conversations
+  - Conversation status (Open, Pending, Resolved)
+  - Search conversations
+  - Filter by channel, date, staff
+
+### 1.12 Admin Features
 - **Super Admin Dashboard**
   - All dealers overview
   - System-wide analytics
@@ -195,8 +342,11 @@ A multi-tenant Car Dealer SaaS platform built on PHP 8.2+ that enables multiple 
 
 - **Dealer Admin Dashboard**
   - Vehicle CRUD operations
+  - CRM lead pipeline
   - Enquiry inbox with status tracking
   - Finance applications dashboard
+  - Calendar & appointments
+  - Invoice management
   - Customer database (GDPR-compliant)
   - Staff user permissions (Owner, Manager, Sales, Receptionist)
   - Reports (Sales, Enquiries, Website traffic, Popular vehicles)
@@ -232,7 +382,11 @@ A multi-tenant Car Dealer SaaS platform built on PHP 8.2+ that enables multiple 
   "phpoffice/phpspreadsheet": "^1.29",
   "aws/aws-sdk-php": "^3.0",
   "google/apiclient": "^2.12",
-  "ibericode/vat": "^2.0"
+  "ibericode/vat": "^2.0",
+  "twilio/sdk": "^7.2",
+  "netflie/whatsapp-cloud-api": "^2.0",
+  "spatie/laravel-google-calendar": "^3.5",
+  "spatie/browsershot": "^3.59"
 }
 ```
 
@@ -873,6 +1027,482 @@ CREATE TABLE activity_logs (
     INDEX idx_user (user_id),
     INDEX idx_created (created_date)
 );
+
+-- CRM Leads (Enhanced from enquiries)
+CREATE TABLE crm_leads (
+    lead_id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    customer_id INT,
+    vehicle_id INT,
+
+    -- Lead Info
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    phone VARCHAR(50),
+    whatsapp_number VARCHAR(50),
+
+    -- Lead Status
+    status ENUM('new', 'contacted', 'qualified', 'test-drive-booked', 'negotiating', 'won', 'lost') DEFAULT 'new',
+    lead_source VARCHAR(100),
+    lead_score INT DEFAULT 0,
+
+    -- Assignment
+    assigned_to INT,
+    assigned_date DATETIME,
+
+    -- Lead Details
+    interested_vehicle_type VARCHAR(100),
+    budget_min DECIMAL(10,2),
+    budget_max DECIMAL(10,2),
+    timeframe VARCHAR(50),
+    trade_in_interest TINYINT DEFAULT 0,
+    finance_interest TINYINT DEFAULT 0,
+
+    -- Tracking
+    first_contact_date DATETIME,
+    last_contact_date DATETIME,
+    next_followup_date DATETIME,
+    won_date DATETIME,
+    lost_date DATETIME,
+    lost_reason VARCHAR(255),
+
+    -- Meta
+    tags JSON,
+    custom_fields JSON,
+
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE SET NULL,
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id) ON DELETE SET NULL,
+    INDEX idx_company (company_id),
+    INDEX idx_status (status),
+    INDEX idx_assigned_to (assigned_to),
+    INDEX idx_lead_score (lead_score)
+);
+
+-- CRM Activities (Calls, Emails, Meetings, Notes)
+CREATE TABLE crm_activities (
+    activity_id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    lead_id INT,
+    customer_id INT,
+    user_id INT NOT NULL,
+
+    -- Activity Details
+    activity_type ENUM('call', 'email', 'whatsapp', 'sms', 'meeting', 'note', 'task') NOT NULL,
+    subject VARCHAR(255),
+    description TEXT,
+
+    -- Date/Time
+    activity_date DATETIME NOT NULL,
+    duration_minutes INT,
+
+    -- Call Specific
+    call_direction ENUM('inbound', 'outbound'),
+    call_outcome ENUM('answered', 'voicemail', 'no-answer', 'busy'),
+
+    -- Email Specific
+    email_opened TINYINT DEFAULT 0,
+    email_clicked TINYINT DEFAULT 0,
+
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (lead_id) REFERENCES crm_leads(lead_id) ON DELETE CASCADE,
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE,
+    INDEX idx_company (company_id),
+    INDEX idx_lead (lead_id),
+    INDEX idx_customer (customer_id),
+    INDEX idx_activity_date (activity_date)
+);
+
+-- CRM Tasks
+CREATE TABLE crm_tasks (
+    task_id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    lead_id INT,
+    customer_id INT,
+    assigned_to INT NOT NULL,
+    created_by INT NOT NULL,
+
+    -- Task Details
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    task_type ENUM('call', 'email', 'meeting', 'follow-up', 'other') NOT NULL,
+    priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
+
+    -- Dates
+    due_date DATE NOT NULL,
+    due_time TIME,
+    completed_date DATETIME,
+
+    -- Status
+    status ENUM('pending', 'in-progress', 'completed', 'cancelled') DEFAULT 'pending',
+
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (lead_id) REFERENCES crm_leads(lead_id) ON DELETE CASCADE,
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE,
+    INDEX idx_company (company_id),
+    INDEX idx_assigned_to (assigned_to),
+    INDEX idx_due_date (due_date),
+    INDEX idx_status (status)
+);
+
+-- Calendar Appointments
+CREATE TABLE calendar_appointments (
+    appointment_id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    customer_id INT,
+    lead_id INT,
+    vehicle_id INT,
+    assigned_to INT NOT NULL,
+
+    -- Appointment Details
+    appointment_type ENUM('test-drive', 'service', 'consultation', 'vehicle-viewing', 'other') NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    location VARCHAR(255),
+
+    -- Date/Time
+    start_datetime DATETIME NOT NULL,
+    end_datetime DATETIME NOT NULL,
+    timezone VARCHAR(50) DEFAULT 'Europe/Dublin',
+
+    -- Status
+    status ENUM('scheduled', 'confirmed', 'completed', 'no-show', 'cancelled') DEFAULT 'scheduled',
+
+    -- Google Calendar
+    google_calendar_event_id VARCHAR(255),
+    google_calendar_synced TINYINT DEFAULT 0,
+    last_synced DATETIME,
+
+    -- Reminders
+    reminder_sent TINYINT DEFAULT 0,
+    reminder_sent_date DATETIME,
+
+    -- Notes
+    notes TEXT,
+    outcome TEXT,
+
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE SET NULL,
+    FOREIGN KEY (lead_id) REFERENCES crm_leads(lead_id) ON DELETE SET NULL,
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id) ON DELETE SET NULL,
+    INDEX idx_company (company_id),
+    INDEX idx_assigned_to (assigned_to),
+    INDEX idx_start_datetime (start_datetime),
+    INDEX idx_status (status)
+);
+
+-- Sales Invoices
+CREATE TABLE sales_invoices (
+    invoice_id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    customer_id INT NOT NULL,
+    vehicle_id INT,
+
+    -- Invoice Details
+    invoice_number VARCHAR(50) UNIQUE NOT NULL,
+    invoice_date DATE NOT NULL,
+    due_date DATE,
+
+    -- Customer Info (snapshot at time of invoice)
+    customer_name VARCHAR(255) NOT NULL,
+    customer_email VARCHAR(255),
+    customer_phone VARCHAR(50),
+    customer_address TEXT,
+
+    -- Invoice Line Items (stored as JSON)
+    line_items JSON NOT NULL,
+
+    -- Amounts
+    subtotal DECIMAL(10,2) NOT NULL,
+    vat_rate DECIMAL(5,2) DEFAULT 23.00,
+    vat_amount DECIMAL(10,2) NOT NULL,
+    total DECIMAL(10,2) NOT NULL,
+    deposit_amount DECIMAL(10,2) DEFAULT 0,
+    balance_due DECIMAL(10,2) NOT NULL,
+
+    -- Payment
+    payment_status ENUM('unpaid', 'partial', 'paid', 'refunded') DEFAULT 'unpaid',
+    payment_method VARCHAR(50),
+    paid_amount DECIMAL(10,2) DEFAULT 0,
+    paid_date DATETIME,
+
+    -- Documents
+    invoice_pdf_url VARCHAR(500),
+
+    -- Notes
+    notes TEXT,
+    terms TEXT,
+
+    -- Status
+    status ENUM('draft', 'sent', 'paid', 'void') DEFAULT 'draft',
+
+    created_by INT,
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id) ON DELETE SET NULL,
+    INDEX idx_company (company_id),
+    INDEX idx_customer (customer_id),
+    INDEX idx_invoice_number (invoice_number),
+    INDEX idx_payment_status (payment_status),
+    INDEX idx_invoice_date (invoice_date)
+);
+
+-- Service Invoices
+CREATE TABLE service_invoices (
+    service_invoice_id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    customer_id INT NOT NULL,
+    vehicle_registration VARCHAR(50),
+
+    -- Invoice Details
+    invoice_number VARCHAR(50) UNIQUE NOT NULL,
+    invoice_date DATE NOT NULL,
+    due_date DATE,
+
+    -- Customer Info
+    customer_name VARCHAR(255) NOT NULL,
+    customer_email VARCHAR(255),
+    customer_phone VARCHAR(50),
+
+    -- Service Details
+    service_type VARCHAR(100),
+    service_date DATE,
+    mileage INT,
+    technician_id INT,
+
+    -- Line Items (services & parts)
+    line_items JSON NOT NULL,
+
+    -- Amounts
+    labor_total DECIMAL(10,2) DEFAULT 0,
+    parts_total DECIMAL(10,2) DEFAULT 0,
+    subtotal DECIMAL(10,2) NOT NULL,
+    vat_rate DECIMAL(5,2) DEFAULT 23.00,
+    vat_amount DECIMAL(10,2) NOT NULL,
+    total DECIMAL(10,2) NOT NULL,
+
+    -- Payment
+    payment_status ENUM('unpaid', 'partial', 'paid') DEFAULT 'unpaid',
+    payment_method VARCHAR(50),
+    paid_amount DECIMAL(10,2) DEFAULT 0,
+    paid_date DATETIME,
+
+    -- Documents
+    invoice_pdf_url VARCHAR(500),
+
+    -- Notes
+    work_performed TEXT,
+    notes TEXT,
+
+    -- Status
+    status ENUM('draft', 'sent', 'paid', 'void') DEFAULT 'draft',
+
+    created_by INT,
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
+    INDEX idx_company (company_id),
+    INDEX idx_customer (customer_id),
+    INDEX idx_invoice_number (invoice_number),
+    INDEX idx_payment_status (payment_status)
+);
+
+-- Vehicle Deposits
+CREATE TABLE vehicle_deposits (
+    deposit_id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    vehicle_id INT NOT NULL,
+    customer_id INT,
+    lead_id INT,
+
+    -- Deposit Details
+    deposit_amount DECIMAL(10,2) NOT NULL,
+    deposit_type ENUM('fixed', 'percentage') DEFAULT 'fixed',
+    deposit_percentage DECIMAL(5,2),
+
+    -- Customer Info
+    customer_name VARCHAR(255) NOT NULL,
+    customer_email VARCHAR(255) NOT NULL,
+    customer_phone VARCHAR(50),
+
+    -- Payment Info (Stripe)
+    stripe_payment_intent_id VARCHAR(255),
+    stripe_charge_id VARCHAR(255),
+    payment_method VARCHAR(50),
+
+    -- Status
+    status ENUM('pending', 'paid', 'refunded', 'applied', 'expired') DEFAULT 'pending',
+    paid_date DATETIME,
+    refund_date DATETIME,
+    refund_amount DECIMAL(10,2),
+    refund_reason TEXT,
+    expires_at DATETIME,
+
+    -- Invoice Application
+    applied_to_invoice_id INT,
+    applied_date DATETIME,
+
+    -- Documents
+    receipt_pdf_url VARCHAR(500),
+
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id),
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE SET NULL,
+    FOREIGN KEY (lead_id) REFERENCES crm_leads(lead_id) ON DELETE SET NULL,
+    FOREIGN KEY (applied_to_invoice_id) REFERENCES sales_invoices(invoice_id) ON DELETE SET NULL,
+    INDEX idx_company (company_id),
+    INDEX idx_vehicle (vehicle_id),
+    INDEX idx_status (status)
+);
+
+-- Invoice Payments
+CREATE TABLE invoice_payments (
+    payment_id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    invoice_id INT,
+    service_invoice_id INT,
+
+    -- Payment Details
+    payment_amount DECIMAL(10,2) NOT NULL,
+    payment_method ENUM('cash', 'card', 'bank-transfer', 'finance', 'stripe') NOT NULL,
+    payment_date DATETIME NOT NULL,
+
+    -- Stripe (if applicable)
+    stripe_payment_intent_id VARCHAR(255),
+    stripe_charge_id VARCHAR(255),
+
+    -- Reference
+    reference_number VARCHAR(100),
+    notes TEXT,
+
+    created_by INT,
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (invoice_id) REFERENCES sales_invoices(invoice_id) ON DELETE CASCADE,
+    FOREIGN KEY (service_invoice_id) REFERENCES service_invoices(service_invoice_id) ON DELETE CASCADE,
+    INDEX idx_company (company_id),
+    INDEX idx_invoice (invoice_id),
+    INDEX idx_service_invoice (service_invoice_id),
+    INDEX idx_payment_date (payment_date)
+);
+
+-- Communications (Unified inbox for emails, WhatsApp, SMS)
+CREATE TABLE communications (
+    communication_id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    customer_id INT,
+    lead_id INT,
+
+    -- Communication Details
+    channel ENUM('email', 'whatsapp', 'sms', 'internal-note') NOT NULL,
+    direction ENUM('inbound', 'outbound') NOT NULL,
+    from_address VARCHAR(255),
+    to_address VARCHAR(255),
+    subject VARCHAR(255),
+    message TEXT NOT NULL,
+
+    -- Status
+    status ENUM('open', 'pending', 'resolved') DEFAULT 'open',
+    assigned_to INT,
+
+    -- Tracking
+    sent_date DATETIME,
+    delivered_date DATETIME,
+    read_date DATETIME,
+    replied TINYINT DEFAULT 0,
+
+    -- External IDs
+    postmark_message_id VARCHAR(255),
+    whatsapp_message_id VARCHAR(255),
+    twilio_message_sid VARCHAR(255),
+
+    -- Attachments
+    attachments JSON,
+
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE,
+    FOREIGN KEY (lead_id) REFERENCES crm_leads(lead_id) ON DELETE CASCADE,
+    INDEX idx_company (company_id),
+    INDEX idx_customer (customer_id),
+    INDEX idx_lead (lead_id),
+    INDEX idx_channel (channel),
+    INDEX idx_status (status),
+    INDEX idx_created_date (created_date)
+);
+
+-- Email Templates
+CREATE TABLE email_templates (
+    template_id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT,
+
+    -- Template Details
+    template_name VARCHAR(100) NOT NULL,
+    template_slug VARCHAR(100) NOT NULL,
+    category ENUM('transactional', 'marketing', 'crm', 'service') DEFAULT 'transactional',
+    subject VARCHAR(255) NOT NULL,
+    body_html TEXT NOT NULL,
+    body_text TEXT,
+
+    -- Merge Tags (available variables)
+    merge_tags JSON,
+
+    -- Status
+    is_active TINYINT DEFAULT 1,
+    is_system TINYINT DEFAULT 0,
+
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_company (company_id),
+    INDEX idx_template_slug (template_slug)
+);
+
+-- Service Items Library
+CREATE TABLE service_items (
+    item_id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+
+    -- Item Details
+    item_type ENUM('service', 'part') NOT NULL,
+    item_code VARCHAR(50),
+    item_name VARCHAR(255) NOT NULL,
+    description TEXT,
+
+    -- Pricing
+    unit_price DECIMAL(10,2) NOT NULL,
+    cost_price DECIMAL(10,2),
+
+    -- Service Specific
+    estimated_time_minutes INT,
+
+    -- Part Specific
+    quantity_in_stock INT DEFAULT 0,
+    reorder_level INT,
+    supplier VARCHAR(255),
+
+    -- Status
+    is_active TINYINT DEFAULT 1,
+
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_company (company_id),
+    INDEX idx_item_type (item_type),
+    INDEX idx_item_code (item_code)
+);
 ```
 
 ---
@@ -1007,25 +1637,25 @@ if (fn_subscription_check_feature($company_id, 'api_access')) {
 
 ---
 
-## 5. IMPLEMENTATION ROADMAP
+## 5. IMPLEMENTATION ROADMAP (15 PHASES - 29 WEEKS)
 
 ### Phase 1: Foundation (Weeks 1-2)
 
 **Database & Core Infrastructure**
-- [ ] Set up project structure
+- [ ] Set up project structure (/app, /public, /views, /storage)
 - [ ] Create config.php with database credentials
 - [ ] Implement routing system (fn_core_router.php)
 - [ ] Build database helper functions (fn_core_database.php)
-- [ ] Create all database tables
+- [ ] Create all 30+ database tables (core + new tables)
 - [ ] Set up session management (fn_core_session.php)
-- [ ] Implement authentication system
-- [ ] Create permission levels
+- [ ] Implement authentication system (login, register, logout)
+- [ ] Create permission levels (0=Guest, 1=Registered, 2=Company, 3=Paid, 10=Super Admin)
 
 **Basic Admin UI**
-- [ ] Set up Bootstrap admin theme
-- [ ] Create admin layout partials
-- [ ] Build dashboard homepage
-- [ ] Implement side menu system
+- [ ] Set up Bootstrap 5 admin theme
+- [ ] Create admin layout partials (header, sidebar, footer)
+- [ ] Build dashboard homepage with widgets
+- [ ] Implement dynamic side menu system
 
 ### Phase 2: User & Company Management (Weeks 3-4)
 
@@ -1139,35 +1769,75 @@ if (fn_subscription_check_feature($company_id, 'api_access')) {
 - [ ] Notes & follow-up dates
 - [ ] Email notifications
 
-### Phase 6: Customer Management (Weeks 13-14)
+### Phase 6: CRM & Lead Management (Weeks 13-15)
 
-**Customer Database**
-- [ ] Customer CRUD
-- [ ] Customer detail view
-- [ ] Purchase history
-- [ ] Enquiry history
-- [ ] Communication log
-- [ ] GDPR compliance tools
-- [ ] Export customer data
-- [ ] Delete customer data
+**Lead Pipeline**
+- [ ] CRM leads database (crm_leads table)
+- [ ] Kanban board view (drag-and-drop columns)
+- [ ] Lead CRUD operations
+- [ ] Lead status management (New, Contacted, Qualified, Negotiating, Won, Lost)
+- [ ] Lead scoring system
+- [ ] Lead source tracking
+- [ ] Automated lead assignment rules
+- [ ] Lead conversion tracking
 
-**Stock Alerts**
-- [ ] Alert registration form
+**Contact Management**
+- [ ] Enhanced customer database with lead history
+- [ ] Contact segmentation & tagging
+- [ ] Duplicate detection & merging
+- [ ] Bulk actions (assign, tag, export)
+- [ ] Custom fields for contacts
+- [ ] Contact activity timeline
+
+**Activities & Tasks**
+- [ ] CRM activities (calls, emails, meetings, notes)
+- [ ] Activity logging from all interactions
+- [ ] Task creation & assignment
+- [ ] Task due dates & priorities
+- [ ] Task completion tracking
+- [ ] Overdue task alerts
+- [ ] Daily task digest emails
+
+**Stock Alerts & Wishlist**
+- [ ] Stock alert registration form
 - [ ] Alert criteria storage
 - [ ] Cron job to match vehicles
 - [ ] Email notification
 - [ ] Unsubscribe functionality
-- [ ] Alert management (admin)
+- [ ] Wishlist/Shortlist functionality
 
-**Wishlist/Shortlist**
-- [ ] Add to wishlist button
-- [ ] Wishlist page
-- [ ] Remove from wishlist
-- [ ] Share wishlist
-- [ ] Session-based for guests
-- [ ] Database-stored for users
+### Phase 7: Calendar & Appointments (Weeks 16-17)
 
-### Phase 7: Billing & Subscriptions (Weeks 15-16)
+**Appointment Booking System**
+- [ ] Calendar appointments table
+- [ ] Test drive scheduling
+- [ ] Service booking
+- [ ] Sales consultation booking
+- [ ] Public booking widget (embed on website)
+- [ ] Availability management per user
+- [ ] Buffer time between appointments
+- [ ] Booking confirmation emails
+
+**Google Calendar Integration**
+- [ ] Google Calendar API setup
+- [ ] OAuth2 authentication for users
+- [ ] Two-way sync with Google Calendar
+- [ ] Automatic event creation
+- [ ] Update/delete sync
+- [ ] Multi-user calendar support
+- [ ] Conflict detection
+- [ ] Time zone handling
+
+**Calendar Interface**
+- [ ] Day/Week/Month view
+- [ ] Color-coded by appointment type
+- [ ] Drag-and-drop rescheduling
+- [ ] Appointment reminders (email, SMS, WhatsApp)
+- [ ] Recurring appointments
+- [ ] No-show tracking
+- [ ] Cancellation management
+
+### Phase 8: Billing & Subscriptions (Weeks 18-19)
 
 **Stripe Integration**
 - [ ] Stripe account setup
@@ -1195,40 +1865,143 @@ if (fn_subscription_check_feature($company_id, 'api_access')) {
 - [ ] Payment method management
 - [ ] Billing address
 
-### Phase 8: SEO & Marketing (Weeks 17-18)
+### Phase 9: Invoicing & Payments (Weeks 20-22)
+
+**Vehicle Sale Invoices**
+- [ ] Sales invoices table
+- [ ] Automatic invoice generation on vehicle sale
+- [ ] Invoice templates (customizable HTML)
+- [ ] Line items (vehicle, extras, delivery, trade-in deduction)
+- [ ] VAT calculation (standard 23%, margin, exempt)
+- [ ] Deposit tracking & application
+- [ ] Balance due calculation
+- [ ] Invoice PDF generation (Browsershot)
+- [ ] Email invoice to customer
+
+**Service Invoices**
+- [ ] Service invoices table
+- [ ] Service items library (services & parts)
+- [ ] Manual invoice creation
+- [ ] Parts inventory tracking
+- [ ] Labor time tracking
+- [ ] Hourly rates per technician
+- [ ] Multiple payment methods
+- [ ] Partial payment support
+- [ ] Invoice history per customer
+
+**Deposit Management**
+- [ ] Vehicle deposits table
+- [ ] Take deposits via Stripe (Payment Intent API)
+- [ ] Configurable deposit amounts (fixed or percentage)
+- [ ] Deposit refund workflow
+- [ ] Deposit applied to final invoice
+- [ ] Deposit expiry (auto-release after X days)
+- [ ] Deposit receipt email
+- [ ] Mark vehicle as "Reserved" when deposit paid
+
+**Payment Processing**
+- [ ] Invoice payments table
+- [ ] Stripe Terminal integration (card readers)
+- [ ] Cash payment recording
+- [ ] Bank transfer tracking
+- [ ] Finance company payments
+- [ ] Split payments (deposit + balance)
+- [ ] Payment history log
+- [ ] Receipt generation & email
+
+**Invoice Management**
+- [ ] Invoice list view (sales + service)
+- [ ] Invoice detail view
+- [ ] Send invoice via email
+- [ ] Mark invoice as paid
+- [ ] Void invoice
+- [ ] Invoice numbering system
+- [ ] Invoice export to PDF/Excel
+
+### Phase 10: Communications Hub (Weeks 23-24)
+
+**Postmark CRM Integration**
+- [ ] Email templates table
+- [ ] Automated email workflows
+- [ ] Trigger emails on lead status change
+- [ ] Abandoned enquiry follow-up (24h auto-email)
+- [ ] New stock alerts (matching saved searches)
+- [ ] Birthday/anniversary emails
+- [ ] Service reminder emails (NCT/MOT due)
+- [ ] Payment reminder emails
+- [ ] Email templates with merge tags
+- [ ] Email analytics (open rate, click rate via Postmark)
+- [ ] Suppression list management
+
+**WhatsApp Integration**
+- [ ] WhatsApp Business API setup
+- [ ] Send messages to customers
+- [ ] Template messages (WhatsApp approved)
+- [ ] Receive messages webhook
+- [ ] WhatsApp chat widget on website
+- [ ] Message templates (enquiry response, appointment confirmation)
+- [ ] WhatsApp notification for new enquiries
+- [ ] WhatsApp appointment reminders
+- [ ] Media sharing (vehicle images, documents)
+
+**SMS Integration (Twilio)**
+- [ ] Twilio account setup
+- [ ] SMS notifications
+- [ ] Appointment reminders via SMS
+- [ ] Test drive confirmations
+- [ ] Payment reminders
+- [ ] Two-way SMS conversations
+- [ ] SMS templates
+- [ ] SMS delivery tracking
+- [ ] Opt-out management
+
+**Unified Inbox**
+- [ ] Communications table
+- [ ] All channels in one view (Email, WhatsApp, SMS)
+- [ ] Single conversation thread per customer
+- [ ] Assign conversations to staff
+- [ ] Internal notes on conversations
+- [ ] Conversation status (Open, Pending, Resolved)
+- [ ] Search conversations
+- [ ] Filter by channel, date, staff
+- [ ] Real-time notifications
+
+### Phase 11: SEO & Marketing (Weeks 25-26)
 
 **SEO Tools**
 - [ ] Auto-generated meta tags
-- [ ] Schema.org markup (Car, LocalBusiness)
+- [ ] Schema.org markup (Car, LocalBusiness, Review)
 - [ ] XML sitemap generation
-- [ ] SEO-friendly URLs
-- [ ] Open Graph tags
+- [ ] SEO-friendly URLs with slugs
+- [ ] Open Graph tags (Facebook)
+- [ ] Twitter Card tags
 - [ ] Canonical URLs
 - [ ] robots.txt
-- [ ] sitemap.xml cron job
+- [ ] sitemap.xml cron job (daily regeneration)
 
 **Email Marketing**
 - [ ] Newsletter subscription
 - [ ] Email template system
-- [ ] New stock alerts
-- [ ] Postmark integration
-- [ ] Email preferences
+- [ ] New stock alerts (weekly digest)
+- [ ] Postmark integration (already done in Phase 10)
+- [ ] Email preferences center
 - [ ] Unsubscribe handling
 
 **Social Media**
-- [ ] Facebook integration
-- [ ] Instagram feed
+- [ ] Facebook Page integration
+- [ ] Instagram feed display
 - [ ] Social sharing buttons
-- [ ] Auto-post new vehicles (optional)
+- [ ] Auto-post new vehicles to Facebook (optional)
 
 **Analytics**
 - [ ] Google Analytics setup
-- [ ] Google Tag Manager
-- [ ] Conversion tracking
-- [ ] Custom events
+- [ ] Google Tag Manager integration
+- [ ] Conversion tracking (enquiries, test drives, finance apps)
+- [ ] Custom events (vehicle views, searches)
 - [ ] Popular vehicles tracking
+- [ ] Dashboard widget with key metrics
 
-### Phase 9: Reports & Analytics (Week 19)
+### Phase 12: Reports & Analytics (Week 27)
 
 **Dealer Reports**
 - [ ] Sales report (sold vehicles)
@@ -1248,27 +2021,37 @@ if (fn_subscription_check_feature($company_id, 'api_access')) {
 - [ ] Churn rate
 - [ ] System health
 
-### Phase 10: Super Admin Features (Week 20)
+### Phase 13: Super Admin Features (Week 28)
 
 **Super Admin Dashboard**
-- [ ] All dealers list
-- [ ] Dealer detail view
-- [ ] Impersonate dealer
-- [ ] Subscription management
-- [ ] Manual subscription activation
-- [ ] System settings
-- [ ] Feature flags
-- [ ] Email template management
-- [ ] Activity logs
+- [ ] All dealers list with search/filter
+- [ ] Dealer detail view (subscription, usage, activity)
+- [ ] Impersonate dealer (login as dealer)
+- [ ] Subscription management (manual activation, extend trial)
+- [ ] System settings (site name, support email, currency)
+- [ ] Feature flags (enable/disable per dealer)
+- [ ] Email template management (system-wide)
+- [ ] Activity logs (audit trail)
+- [ ] Database backup tools
 
 **Support System**
 - [ ] Support ticket system
-- [ ] Ticket categories
-- [ ] Ticket status
-- [ ] Internal notes
+- [ ] Ticket categories (Billing, Technical, Feature Request, Bug)
+- [ ] Ticket status (Open, In Progress, Waiting, Resolved, Closed)
+- [ ] Internal notes (not visible to dealer)
 - [ ] Email notifications
+- [ ] Ticket priority
+- [ ] Canned responses
 
-### Phase 11: Testing & Optimization (Weeks 21-22)
+**System Monitoring**
+- [ ] System health dashboard
+- [ ] Server resources (CPU, memory, disk)
+- [ ] Database size tracking
+- [ ] Error logs viewer
+- [ ] Email delivery monitoring
+- [ ] API usage tracking
+
+### Phase 14: Testing & Optimization (Weeks 29-30)
 
 **Testing**
 - [ ] User registration flow
@@ -1293,39 +2076,128 @@ if (fn_subscription_check_feature($company_id, 'api_access')) {
 - [ ] Error logging
 - [ ] Monitoring setup
 
-### Phase 12: Launch Preparation (Week 23)
+**Testing (Continued)**
+- [ ] CRM lead pipeline functionality
+- [ ] Calendar appointments & Google Calendar sync
+- [ ] Invoice generation (sales & service)
+- [ ] Deposit payments via Stripe
+- [ ] WhatsApp & SMS integration
+- [ ] Email workflows automation
+- [ ] Unified inbox functionality
+- [ ] Multi-user/multi-tenant isolation
+- [ ] Security audit (SQL injection, XSS, CSRF)
+
+**Optimization**
+- [ ] Database indexing (all 30+ tables)
+- [ ] Query optimization (slow query log)
+- [ ] Image compression & lazy loading
+- [ ] Caching strategy (session, query, page)
+- [ ] CDN setup for static assets (optional)
+- [ ] Error logging & monitoring (Sentry/Bugsnag)
+- [ ] Load testing (Apache Bench / Load Impact)
+- [ ] Code cleanup & documentation
+
+### Phase 15: Launch Preparation (Week 31)
 
 **Documentation**
-- [ ] User guide (dealers)
-- [ ] Admin guide
-- [ ] API documentation (if applicable)
-- [ ] Setup instructions
-- [ ] Troubleshooting guide
+- [ ] User guide for dealers (PDF + online)
+- [ ] Admin guide (vehicle management, CRM, invoicing)
+- [ ] API documentation (Enterprise tier)
+- [ ] Setup instructions (domain, SSL, email)
+- [ ] Troubleshooting guide (common issues)
+- [ ] Video tutorials (YouTube)
 
 **Marketing Materials**
-- [ ] Landing page
-- [ ] Pricing page
-- [ ] Features comparison
-- [ ] Demo videos
-- [ ] Screenshots
-- [ ] Case studies (if available)
+- [ ] Landing page (features, pricing, testimonials)
+- [ ] Pricing page (3-tier comparison)
+- [ ] Features page (detailed)
+- [ ] Demo videos (2-3 minutes overview)
+- [ ] Screenshots (dashboard, CRM, calendar, invoicing)
+- [ ] Case studies (beta dealers if available)
+- [ ] Press release draft
 
 **Launch Checklist**
-- [ ] Domain setup
-- [ ] SSL certificates
-- [ ] Email deliverability (SPF, DKIM)
-- [ ] Backup system
-- [ ] Monitoring alerts
-- [ ] Support email setup
-- [ ] Terms of Service
-- [ ] Privacy Policy
-- [ ] Cookie consent
+- [ ] Domain setup (DNS, nameservers)
+- [ ] SSL certificates (Let's Encrypt/Cloudflare)
+- [ ] Email deliverability (SPF, DKIM, DMARC records)
+- [ ] Backup system (automated daily backups)
+- [ ] Monitoring alerts (uptime, server health)
+- [ ] Support email setup (support@cardealer.tools)
+- [ ] Terms of Service (legal review)
+- [ ] Privacy Policy (GDPR compliant)
+- [ ] Cookie consent banner
+- [ ] Payment processing (live Stripe keys)
+- [ ] Postmark account (live API keys)
+- [ ] Twilio account (live credentials)
+- [ ] WhatsApp Business API (production access)
+- [ ] Google Calendar API (production limits)
+- [ ] Social media accounts (Twitter, LinkedIn, Facebook)
+- [ ] Beta tester feedback implemented
+- [ ] Load testing completed
+- [ ] Final security audit
 
 ---
 
-## 6. KEY FUNCTIONS TO IMPLEMENT
+## 6. IMPLEMENTATION TIMELINE SUMMARY
 
-### 6.1 Vehicle Functions (fn_vehicles.php)
+| Phase | Duration | Cumulative | Deliverable |
+|-------|----------|------------|-------------|
+| **Phase 1** | 2 weeks | Week 2 | Foundation & Authentication |
+| **Phase 2** | 2 weeks | Week 4 | Users & Company Management |
+| **Phase 3** | 3 weeks | Week 7 | Vehicle Management System |
+| **Phase 4** | 3 weeks | Week 10 | Public Website & Search |
+| **Phase 5** | 2 weeks | Week 12 | Finance & Enquiries |
+| **Phase 6** | 3 weeks | Week 15 | **CRM & Lead Management** |
+| **Phase 7** | 2 weeks | Week 17 | **Calendar & Appointments** |
+| **Phase 8** | 2 weeks | Week 19 | Billing & Subscriptions |
+| **Phase 9** | 3 weeks | Week 22 | **Invoicing & Payments** |
+| **Phase 10** | 2 weeks | Week 24 | **Communications Hub** |
+| **Phase 11** | 2 weeks | Week 26 | SEO & Marketing |
+| **Phase 12** | 1 week | Week 27 | Reports & Analytics |
+| **Phase 13** | 1 week | Week 28 | Super Admin Features |
+| **Phase 14** | 2 weeks | Week 30 | Testing & Optimization |
+| **Phase 15** | 1 week | Week 31 | Launch Preparation |
+
+**TOTAL: 31 weeks (approximately 7.5 months)**
+
+**NEW FEATURES ADDED:**
+- ✅ Phase 6: CRM for managing leads with pipeline view
+- ✅ Phase 7: Calendar with Google Calendar integration
+- ✅ Phase 9: Stripe deposits + Vehicle & Service invoicing
+- ✅ Phase 10: Postmark automation + WhatsApp + SMS + Unified Inbox
+
+---
+
+## 7. MVP OPTION (Faster Launch - 16 Weeks)
+
+If you want to launch faster with core features:
+
+**MVP Includes:**
+- Phase 1: Foundation ✅
+- Phase 2: Users & Companies ✅
+- Phase 3: Vehicle Management ✅
+- Phase 4: Public Website ✅
+- Phase 5: Enquiries only (skip finance applications) ✅
+- Phase 6: Basic CRM (lead pipeline + tasks) ✅
+- Phase 8: Billing & Subscriptions ✅
+- Phase 14: Testing ✅
+
+**MVP Excludes** (can add post-launch):
+- Calendar & Appointments
+- Invoicing & Payments
+- Communications Hub (WhatsApp, SMS)
+- Advanced SEO & Marketing
+- Reports & Analytics
+
+**MVP Timeline: 16 weeks (4 months)**
+
+---
+
+---
+
+## 8. KEY FUNCTIONS TO IMPLEMENT
+
+### 8.1 Vehicle Functions (fn_vehicles.php)
 
 ```php
 fn_vehicles_create($data)
@@ -1417,7 +2289,7 @@ fn_seo_generate_sitemap($company_id)
 fn_seo_submit_sitemap_to_google($company_id)
 ```
 
-### 6.8 Email Functions (fn_core_email.php)
+### 8.8 Email Functions (fn_core_email.php)
 
 ```php
 fn_email_send($to, $subject, $body, $template)
@@ -1430,9 +2302,182 @@ fn_email_send_trial_ending($company_id, $days_left)
 fn_email_send_invoice($invoice_id)
 ```
 
+### 8.9 CRM Functions (fn_crm.php)
+
+```php
+// Lead Management
+fn_crm_lead_create($data)
+fn_crm_lead_update($lead_id, $data, $company_id)
+fn_crm_lead_delete($lead_id, $company_id)
+fn_crm_lead_get_all($company_id, $filters, $offset, $limit)
+fn_crm_lead_get_by_id($lead_id, $company_id)
+fn_crm_lead_get_by_status($company_id, $status)
+fn_crm_lead_update_status($lead_id, $status, $company_id)
+fn_crm_lead_assign($lead_id, $user_id, $company_id)
+fn_crm_lead_convert_to_customer($lead_id)
+fn_crm_lead_mark_as_won($lead_id, $company_id)
+fn_crm_lead_mark_as_lost($lead_id, $reason, $company_id)
+fn_crm_lead_calculate_score($lead_id)
+
+// Activities
+fn_crm_activity_create($lead_id, $activity_type, $data)
+fn_crm_activity_get_by_lead($lead_id)
+fn_crm_activity_get_by_customer($customer_id)
+fn_crm_activity_get_recent($company_id, $limit)
+
+// Tasks
+fn_crm_task_create($data)
+fn_crm_task_update($task_id, $data, $company_id)
+fn_crm_task_complete($task_id, $company_id)
+fn_crm_task_get_by_user($user_id, $filters)
+fn_crm_task_get_overdue($user_id)
+fn_crm_task_send_daily_digest($user_id)
+
+// Pipeline
+fn_crm_pipeline_get_counts($company_id)
+fn_crm_pipeline_get_leads_by_stage($company_id, $status)
+```
+
+### 8.10 Calendar Functions (fn_calendar.php)
+
+```php
+// Appointments
+fn_calendar_appointment_create($data)
+fn_calendar_appointment_update($appointment_id, $data, $company_id)
+fn_calendar_appointment_delete($appointment_id, $company_id)
+fn_calendar_appointment_get_all($company_id, $start_date, $end_date, $user_id)
+fn_calendar_appointment_get_by_id($appointment_id, $company_id)
+fn_calendar_appointment_get_by_user($user_id, $start_date, $end_date)
+fn_calendar_appointment_update_status($appointment_id, $status, $company_id)
+fn_calendar_appointment_check_conflicts($user_id, $start_datetime, $end_datetime)
+
+// Google Calendar Integration
+fn_calendar_google_sync_appointment($appointment_id)
+fn_calendar_google_create_event($appointment_data)
+fn_calendar_google_update_event($google_event_id, $appointment_data)
+fn_calendar_google_delete_event($google_event_id)
+fn_calendar_google_auth_url($user_id)
+fn_calendar_google_handle_callback($code, $user_id)
+
+// Availability
+fn_calendar_get_available_slots($user_id, $date, $duration_minutes)
+fn_calendar_set_working_hours($user_id, $working_hours)
+
+// Reminders
+fn_calendar_send_appointment_reminder($appointment_id, $method)
+fn_calendar_send_upcoming_reminders() // Cron job
+```
+
+### 8.11 Invoice Functions (fn_invoices.php)
+
+```php
+// Sales Invoices
+fn_invoice_create_for_vehicle_sale($vehicle_id, $customer_id, $data)
+fn_invoice_get_all($company_id, $filters, $offset, $limit)
+fn_invoice_get_by_id($invoice_id, $company_id)
+fn_invoice_get_by_customer($customer_id, $company_id)
+fn_invoice_update($invoice_id, $data, $company_id)
+fn_invoice_delete($invoice_id, $company_id)
+fn_invoice_mark_as_sent($invoice_id, $company_id)
+fn_invoice_mark_as_paid($invoice_id, $payment_data, $company_id)
+fn_invoice_void($invoice_id, $company_id)
+fn_invoice_generate_pdf($invoice_id)
+fn_invoice_send_email($invoice_id)
+fn_invoice_generate_number($company_id)
+
+// Service Invoices
+fn_service_invoice_create($customer_id, $data)
+fn_service_invoice_update($service_invoice_id, $data, $company_id)
+fn_service_invoice_get_all($company_id, $filters, $offset, $limit)
+fn_service_invoice_get_by_id($service_invoice_id, $company_id)
+fn_service_invoice_mark_as_paid($service_invoice_id, $payment_data)
+fn_service_invoice_generate_pdf($service_invoice_id)
+fn_service_invoice_send_email($service_invoice_id)
+
+// Service Items
+fn_service_item_create($data)
+fn_service_item_update($item_id, $data, $company_id)
+fn_service_item_get_all($company_id, $item_type)
+fn_service_item_get_by_id($item_id, $company_id)
+fn_service_item_update_stock($item_id, $quantity, $company_id)
+
+// Invoice Payments
+fn_invoice_payment_add($invoice_id, $payment_data)
+fn_invoice_payment_get_history($invoice_id)
+fn_invoice_calculate_balance($invoice_id)
+```
+
+### 8.12 Deposit Functions (fn_deposits.php)
+
+```php
+// Vehicle Deposits
+fn_deposit_create($vehicle_id, $customer_data, $deposit_amount)
+fn_deposit_process_stripe_payment($deposit_id, $payment_intent_id)
+fn_deposit_get_by_vehicle($vehicle_id, $company_id)
+fn_deposit_get_by_id($deposit_id, $company_id)
+fn_deposit_refund($deposit_id, $reason, $company_id)
+fn_deposit_apply_to_invoice($deposit_id, $invoice_id, $company_id)
+fn_deposit_check_expired() // Cron job
+fn_deposit_mark_vehicle_reserved($vehicle_id, $company_id)
+fn_deposit_release_vehicle($vehicle_id, $company_id)
+fn_deposit_generate_receipt($deposit_id)
+fn_deposit_send_receipt_email($deposit_id)
+
+// Stripe Payment Intents
+fn_deposit_create_payment_intent($amount, $currency, $metadata)
+fn_deposit_confirm_payment_intent($payment_intent_id)
+fn_deposit_cancel_payment_intent($payment_intent_id)
+```
+
+### 8.13 Communication Functions (fn_communications.php)
+
+```php
+// Unified Inbox
+fn_communication_create($channel, $direction, $data)
+fn_communication_get_all($company_id, $filters, $offset, $limit)
+fn_communication_get_by_customer($customer_id, $company_id)
+fn_communication_get_by_lead($lead_id, $company_id)
+fn_communication_update_status($communication_id, $status, $company_id)
+fn_communication_assign($communication_id, $user_id, $company_id)
+
+// Email (Postmark)
+fn_email_send_via_postmark($to, $subject, $body, $template_id)
+fn_email_send_with_template($template_slug, $to, $merge_data)
+fn_email_track_open($postmark_message_id)
+fn_email_track_click($postmark_message_id, $link_url)
+fn_email_get_analytics($date_range, $company_id)
+
+// Email Templates
+fn_email_template_create($data)
+fn_email_template_update($template_id, $data, $company_id)
+fn_email_template_get_all($company_id, $category)
+fn_email_template_get_by_slug($template_slug, $company_id)
+fn_email_template_render($template_id, $merge_data)
+
+// WhatsApp
+fn_whatsapp_send_message($to, $message, $company_id)
+fn_whatsapp_send_template($to, $template_name, $parameters)
+fn_whatsapp_send_media($to, $media_url, $caption)
+fn_whatsapp_receive_message_webhook($data)
+fn_whatsapp_mark_as_read($message_id)
+
+// SMS (Twilio)
+fn_sms_send($to, $message, $company_id)
+fn_sms_receive_webhook($data)
+fn_sms_get_delivery_status($twilio_sid)
+fn_sms_handle_optout($phone_number)
+
+// Automated Workflows
+fn_workflow_abandoned_enquiry_followup() // Cron job
+fn_workflow_lead_status_change_email($lead_id, $old_status, $new_status)
+fn_workflow_birthday_email() // Cron job
+fn_workflow_service_reminder() // Cron job
+fn_workflow_payment_reminder() // Cron job
+```
+
 ---
 
-## 7. SECURITY CONSIDERATIONS
+## 9. SECURITY CONSIDERATIONS
 
 ### 7.1 Authentication & Authorization
 - Password hashing with `password_hash()` (bcrypt)
@@ -1465,7 +2510,7 @@ fn_email_send_invoice($invoice_id)
 
 ---
 
-## 8. PERFORMANCE OPTIMIZATION
+## 10. PERFORMANCE OPTIMIZATION
 
 ### 8.1 Database
 - Proper indexing (company_id, status, created_date)
@@ -1496,7 +2541,7 @@ fn_email_send_invoice($invoice_id)
 
 ---
 
-## 9. THIRD-PARTY INTEGRATIONS
+## 11. THIRD-PARTY INTEGRATIONS
 
 ### Required:
 - **Stripe** - Payment processing
@@ -1514,7 +2559,14 @@ fn_email_send_invoice($invoice_id)
 
 ---
 
-## 10. DEPLOYMENT & HOSTING
+### Required (NEW):
+- **Twilio** - SMS messaging
+- **WhatsApp Business API** - WhatsApp integration
+- **Google Calendar API** - Calendar synchronization
+
+---
+
+## 12. DEPLOYMENT & HOSTING
 
 ### Server Requirements:
 - PHP 8.2+
@@ -1538,7 +2590,7 @@ fn_email_send_invoice($invoice_id)
 
 ---
 
-## 11. NEXT STEPS
+## 13. NEXT STEPS
 
 1. **Review & Approve Plan** - Confirm features and architecture
 2. **Set Up Development Environment** - Local database, config
@@ -1551,7 +2603,7 @@ fn_email_send_invoice($invoice_id)
 
 ---
 
-## 12. SUCCESS METRICS
+## 14. SUCCESS METRICS
 
 ### Technical KPIs:
 - Page load time < 2 seconds
@@ -1568,15 +2620,59 @@ fn_email_send_invoice($invoice_id)
 
 ---
 
-## ESTIMATED TIMELINE: 23 Weeks (5.5 Months)
+## ESTIMATED TIMELINE: 31 Weeks (7.5 Months)
 
 **Start Date:** TBD
-**Soft Launch:** Week 22
-**Official Launch:** Week 24
+**Soft Launch:** Week 30
+**Official Launch:** Week 32
+
+**Timeline Options:**
+- **Full Launch (31 weeks):** All features including CRM, Calendar, Invoicing, Communications Hub
+- **MVP Launch (16 weeks):** Core features only, add advanced features post-launch
 
 ---
 
-**Document Version:** 1.0
+## NEW FEATURES SUMMARY
+
+**Added to Original Plan:**
+1. **CRM & Lead Management** (Phase 6)
+   - Kanban pipeline view
+   - Lead scoring & assignment
+   - Activity tracking
+   - Task management
+
+2. **Calendar & Appointments** (Phase 7)
+   - Google Calendar two-way sync
+   - Public booking widget
+   - Appointment reminders (Email, SMS, WhatsApp)
+
+3. **Invoicing & Payments** (Phase 9)
+   - Vehicle sale invoices (automatic generation)
+   - Service invoices (manual entry)
+   - Stripe deposit system (reserve vehicles)
+   - Payment tracking & receipts
+
+4. **Communications Hub** (Phase 10)
+   - Postmark email automation & workflows
+   - WhatsApp Business API integration
+   - Twilio SMS integration
+   - Unified inbox (Email, WhatsApp, SMS)
+
+**Database Impact:**
+- Added 14 new tables (crm_leads, calendar_appointments, sales_invoices, service_invoices, vehicle_deposits, invoice_payments, communications, email_templates, crm_activities, crm_tasks, service_items, and more)
+- Total tables: 30+ (up from 16 original)
+
+**Function Libraries Added:**
+- fn_crm.php (lead & task management)
+- fn_calendar.php (appointments & Google Calendar sync)
+- fn_invoices.php (sales & service invoicing)
+- fn_deposits.php (Stripe deposits)
+- fn_communications.php (email, WhatsApp, SMS, unified inbox)
+
+---
+
+**Document Version:** 2.0
 **Last Updated:** 2025-11-13
 **Author:** Claude AI Assistant
 **Project:** Car Dealer SaaS Platform
+**Status:** Extended with CRM, Calendar, Invoicing & Communications features

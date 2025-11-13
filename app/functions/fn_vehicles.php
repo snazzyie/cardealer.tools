@@ -708,3 +708,235 @@ function fn_vehicle_image_upload($vehicleId, $file, $isPrimary = false) {
         return ['success' => false, 'error' => 'Failed to move uploaded file'];
     }
 }
+
+/**
+ * ====================
+ * VEHICLE FEATURES
+ * ====================
+ */
+
+/**
+ * Get vehicle features
+ *
+ * @param int $vehicleId Vehicle ID
+ * @return array Array of feature names
+ */
+function fn_vehicles_get_features($vehicleId) {
+    $vehicle = fn_core_database_row("SELECT features FROM vehicles WHERE vehicle_id = ?", [$vehicleId]);
+
+    if (!$vehicle || empty($vehicle['features'])) {
+        return [];
+    }
+
+    $features = json_decode($vehicle['features'], true);
+    return is_array($features) ? $features : [];
+}
+
+/**
+ * Update vehicle features
+ *
+ * @param int $vehicleId Vehicle ID
+ * @param int $companyId Company ID (for security)
+ * @param array $features Array of feature names
+ * @return bool Success
+ */
+function fn_vehicles_update_features($vehicleId, $companyId, $features) {
+    // Ensure features is an array
+    if (!is_array($features)) {
+        $features = [];
+    }
+
+    // Encode features as JSON
+    $featuresJson = json_encode(array_values($features));
+
+    $query = "UPDATE vehicles SET features = ? WHERE vehicle_id = ? AND company_id = ?";
+    return fn_core_edit_row_no_redirect($query, [$featuresJson, $vehicleId, $companyId]);
+}
+
+/**
+ * Add feature to vehicle
+ *
+ * @param int $vehicleId Vehicle ID
+ * @param int $companyId Company ID
+ * @param string $feature Feature name
+ * @return bool Success
+ */
+function fn_vehicles_add_feature($vehicleId, $companyId, $feature) {
+    $currentFeatures = fn_vehicles_get_features($vehicleId);
+
+    // Add feature if not already present
+    if (!in_array($feature, $currentFeatures)) {
+        $currentFeatures[] = $feature;
+        return fn_vehicles_update_features($vehicleId, $companyId, $currentFeatures);
+    }
+
+    return true;
+}
+
+/**
+ * Remove feature from vehicle
+ *
+ * @param int $vehicleId Vehicle ID
+ * @param int $companyId Company ID
+ * @param string $feature Feature name
+ * @return bool Success
+ */
+function fn_vehicles_remove_feature($vehicleId, $companyId, $feature) {
+    $currentFeatures = fn_vehicles_get_features($vehicleId);
+
+    // Remove feature if present
+    $key = array_search($feature, $currentFeatures);
+    if ($key !== false) {
+        unset($currentFeatures[$key]);
+        return fn_vehicles_update_features($vehicleId, $companyId, $currentFeatures);
+    }
+
+    return true;
+}
+
+/**
+ * Check if vehicle has feature
+ *
+ * @param int $vehicleId Vehicle ID
+ * @param string $feature Feature name
+ * @return bool True if vehicle has feature
+ */
+function fn_vehicles_has_feature($vehicleId, $feature) {
+    $features = fn_vehicles_get_features($vehicleId);
+    return in_array($feature, $features);
+}
+
+/**
+ * Get all available vehicle features (predefined list)
+ *
+ * @return array Features grouped by category
+ */
+function fn_vehicles_get_available_features() {
+    return [
+        'Safety' => [
+            'ABS',
+            'Airbags',
+            'Traction Control',
+            'Stability Control',
+            'Lane Departure Warning',
+            'Blind Spot Monitoring',
+            'Rear View Camera',
+            'Parking Sensors',
+            'Adaptive Cruise Control',
+            'Emergency Brake Assist',
+            'ISOFIX',
+            'Alarm System',
+            'Immobiliser'
+        ],
+        'Comfort' => [
+            'Air Conditioning',
+            'Climate Control',
+            'Heated Seats',
+            'Ventilated Seats',
+            'Leather Seats',
+            'Electric Seats',
+            'Memory Seats',
+            'Sunroof',
+            'Panoramic Roof',
+            'Cruise Control',
+            'Electric Windows',
+            'Power Steering',
+            'Adjustable Steering Wheel',
+            'Lumbar Support'
+        ],
+        'Technology' => [
+            'Bluetooth',
+            'USB Port',
+            'Apple CarPlay',
+            'Android Auto',
+            'Navigation System',
+            'Touchscreen',
+            'Premium Sound System',
+            'DAB Radio',
+            'CD Player',
+            'Keyless Entry',
+            'Start/Stop Button',
+            'Wireless Charging',
+            'Head-Up Display',
+            'Multi-Function Display'
+        ],
+        'Exterior' => [
+            'Alloy Wheels',
+            'LED Headlights',
+            'Xenon Headlights',
+            'Fog Lights',
+            'Roof Rails',
+            'Tow Bar',
+            'Metallic Paint',
+            'Electric Mirrors',
+            'Heated Mirrors',
+            'Privacy Glass',
+            'Sport Body Kit',
+            'Rear Spoiler',
+            'Chrome Package'
+        ],
+        'Performance' => [
+            'Turbo',
+            'Sport Mode',
+            'Paddle Shifters',
+            'All-Wheel Drive',
+            'Limited Slip Differential',
+            'Sport Suspension',
+            'Performance Brakes',
+            'Launch Control',
+            'Eco Mode',
+            'Auto Start-Stop'
+        ]
+    ];
+}
+
+/**
+ * Search vehicles by features
+ *
+ * @param int $companyId Company ID
+ * @param array $requiredFeatures Features to search for
+ * @param bool $matchAll If true, must have all features. If false, must have at least one
+ * @return array Matching vehicles
+ */
+function fn_vehicles_search_by_features($companyId, $requiredFeatures, $matchAll = false) {
+    if (empty($requiredFeatures)) {
+        return [];
+    }
+
+    $query = "SELECT * FROM vehicles WHERE company_id = ? AND status = 'available'";
+    $vehicles = fn_core_database_rows($query, [$companyId]);
+
+    $matches = [];
+
+    foreach ($vehicles as $vehicle) {
+        $vehicleFeatures = fn_vehicles_get_features($vehicle['vehicle_id']);
+
+        if ($matchAll) {
+            // Must have all required features
+            $hasAll = true;
+            foreach ($requiredFeatures as $feature) {
+                if (!in_array($feature, $vehicleFeatures)) {
+                    $hasAll = false;
+                    break;
+                }
+            }
+            if ($hasAll) {
+                $matches[] = $vehicle;
+            }
+        } else {
+            // Must have at least one required feature
+            $hasOne = false;
+            foreach ($requiredFeatures as $feature) {
+                if (in_array($feature, $vehicleFeatures)) {
+                    $hasOne = true;
+                    break;
+                }
+            }
+            if ($hasOne) {
+                $matches[] = $vehicle;
+            }
+        }
+    }
+
+    return $matches;
+}

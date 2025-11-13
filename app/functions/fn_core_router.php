@@ -140,6 +140,7 @@ function fn_core_get_routes() {
         '/super-admin/dealers' => 'super-admin/dealers',
         '/super-admin/dealers/view' => 'super-admin/dealers-view',
         '/super-admin/settings' => 'super-admin/settings',
+        '/super-admin/switch-back' => 'super-admin/switch-back',
 
         // Webhooks
         '/webhook/stripe' => 'webhook/stripe',

@@ -330,3 +330,90 @@ function fn_get_gravatar($email, $size = 80) {
     $hash = md5(strtolower(trim($email)));
     return "https://www.gravatar.com/avatar/$hash?s=$size&d=mp";
 }
+
+/**
+ * Super Admin: Switch to a company
+ * Allows super admin to impersonate a company for support/testing
+ *
+ * @param int $targetCompanyId Company ID to switch to
+ * @return bool Success
+ */
+function fn_super_admin_switch_to_company($targetCompanyId) {
+    // Verify user is super admin
+    if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] != 10) {
+        return false;
+    }
+
+    // Store original data if not already stored
+    if (!isset($_SESSION['super_admin_mode'])) {
+        $_SESSION['super_admin_original_user_id'] = $_SESSION['user_id'];
+        $_SESSION['super_admin_original_company_id'] = $_SESSION['company_id'];
+        $_SESSION['super_admin_original_email'] = $_SESSION['email'];
+        $_SESSION['super_admin_mode'] = true;
+    }
+
+    // Switch to target company
+    $_SESSION['company_id'] = $targetCompanyId;
+    $_SESSION['super_admin_active_company_id'] = $targetCompanyId;
+
+    return true;
+}
+
+/**
+ * Super Admin: Switch back to super admin account
+ * Return to original super admin context
+ *
+ * @return bool Success
+ */
+function fn_super_admin_switch_back() {
+    // Verify we're in super admin mode
+    if (!isset($_SESSION['super_admin_mode']) || !$_SESSION['super_admin_mode']) {
+        return false;
+    }
+
+    // Restore original data
+    $_SESSION['user_id'] = $_SESSION['super_admin_original_user_id'];
+    $_SESSION['company_id'] = $_SESSION['super_admin_original_company_id'];
+    $_SESSION['email'] = $_SESSION['super_admin_original_email'];
+
+    // Clear super admin mode flags
+    unset($_SESSION['super_admin_mode']);
+    unset($_SESSION['super_admin_active_company_id']);
+    unset($_SESSION['super_admin_original_user_id']);
+    unset($_SESSION['super_admin_original_company_id']);
+    unset($_SESSION['super_admin_original_email']);
+
+    return true;
+}
+
+/**
+ * Check if currently in super admin mode (switched to a company)
+ *
+ * @return bool True if in super admin mode
+ */
+function fn_is_super_admin_mode() {
+    return isset($_SESSION['super_admin_mode']) && $_SESSION['super_admin_mode'] === true;
+}
+
+/**
+ * Get the switched company name for display
+ *
+ * @return string|null Company name or null
+ */
+function fn_get_switched_company_name() {
+    if (!fn_is_super_admin_mode()) {
+        return null;
+    }
+
+    if (!isset($_SESSION['super_admin_active_company_id'])) {
+        return null;
+    }
+
+    $companyId = $_SESSION['super_admin_active_company_id'];
+    $company = fn_core_database_row(
+        "SELECT company_name FROM core_company WHERE company_id = ?",
+        [$companyId]
+    );
+
+    return $company ? $company['company_name'] : null;
+}

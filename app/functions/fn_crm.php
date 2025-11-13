@@ -241,3 +241,278 @@ function fn_crm_get_conversion_rate($companyId) {
     $won = fn_crm_count_by_status($companyId, 'won');
     return round(($won / $total) * 100, 1);
 }
+
+/**
+ * ====================
+ * TASK MANAGEMENT
+ * ====================
+ */
+
+/**
+ * Get all tasks for a user
+ *
+ * @param int $userId User ID
+ * @param string $statusFilter Status filter (all, pending, completed)
+ * @return array Tasks
+ */
+function fn_crm_get_user_tasks($userId, $statusFilter = 'all') {
+    $query = "SELECT t.*, l.first_name as lead_first_name, l.last_name as lead_last_name,
+              u.first_name as assigned_first_name, u.last_name as assigned_last_name
+              FROM crm_tasks t
+              LEFT JOIN crm_leads l ON t.lead_id = l.lead_id
+              LEFT JOIN users u ON t.assigned_to = u.user_id
+              WHERE t.assigned_to = ?";
+
+    $params = [$userId];
+
+    if ($statusFilter !== 'all') {
+        $query .= " AND t.status = ?";
+        $params[] = $statusFilter;
+    }
+
+    $query .= " ORDER BY t.due_date ASC, t.priority DESC, t.created_date DESC";
+
+    return fn_core_database_rows($query, $params);
+}
+
+/**
+ * Get all tasks for a company
+ *
+ * @param int $companyId Company ID
+ * @param string $statusFilter Status filter (all, pending, completed)
+ * @return array Tasks
+ */
+function fn_crm_get_company_tasks($companyId, $statusFilter = 'all') {
+    $query = "SELECT t.*, l.first_name as lead_first_name, l.last_name as lead_last_name,
+              u.first_name as assigned_first_name, u.last_name as assigned_last_name
+              FROM crm_tasks t
+              LEFT JOIN crm_leads l ON t.lead_id = l.lead_id
+              LEFT JOIN users u ON t.assigned_to = u.user_id
+              WHERE t.company_id = ?";
+
+    $params = [$companyId];
+
+    if ($statusFilter !== 'all') {
+        $query .= " AND t.status = ?";
+        $params[] = $statusFilter;
+    }
+
+    $query .= " ORDER BY t.due_date ASC, t.priority DESC, t.created_date DESC";
+
+    return fn_core_database_rows($query, $params);
+}
+
+/**
+ * Get task by ID
+ *
+ * @param int $taskId Task ID
+ * @param int $companyId Company ID
+ * @return array|null Task data
+ */
+function fn_crm_get_task($taskId, $companyId) {
+    $query = "SELECT t.*, l.first_name as lead_first_name, l.last_name as lead_last_name,
+              u.first_name as assigned_first_name, u.last_name as assigned_last_name
+              FROM crm_tasks t
+              LEFT JOIN crm_leads l ON t.lead_id = l.lead_id
+              LEFT JOIN users u ON t.assigned_to = u.user_id
+              WHERE t.task_id = ? AND t.company_id = ?";
+    return fn_core_database_row($query, [$taskId, $companyId]);
+}
+
+/**
+ * Create task
+ *
+ * @param array $data Task data (must include company_id)
+ * @return int|false Task ID or false
+ */
+function fn_crm_create_task($data) {
+    $query = "INSERT INTO crm_tasks (
+        company_id, lead_id, assigned_to, task_type, title, description,
+        due_date, priority, status, created_by
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    $params = [
+        $data['company_id'],
+        $data['lead_id'] ?? null,
+        $data['assigned_to'] ?? null,
+        $data['task_type'] ?? 'call',
+        $data['title'],
+        $data['description'] ?? '',
+        $data['due_date'] ?? null,
+        $data['priority'] ?? 'medium',
+        $data['status'] ?? 'pending',
+        $data['created_by'] ?? null
+    ];
+
+    return fn_core_insert_row_no_redirect($query, $params);
+}
+
+/**
+ * Update task
+ *
+ * @param int $taskId Task ID
+ * @param int $companyId Company ID
+ * @param array $data Task data
+ * @return bool Success
+ */
+function fn_crm_update_task($taskId, $companyId, $data) {
+    $query = "UPDATE crm_tasks SET
+        lead_id = ?, assigned_to = ?, task_type = ?, title = ?, description = ?,
+        due_date = ?, priority = ?, status = ?
+    WHERE task_id = ? AND company_id = ?";
+
+    $params = [
+        $data['lead_id'] ?? null,
+        $data['assigned_to'] ?? null,
+        $data['task_type'] ?? 'call',
+        $data['title'],
+        $data['description'] ?? '',
+        $data['due_date'] ?? null,
+        $data['priority'] ?? 'medium',
+        $data['status'] ?? 'pending',
+        $taskId,
+        $companyId
+    ];
+
+    return fn_core_edit_row_no_redirect($query, $params);
+}
+
+/**
+ * Delete task
+ *
+ * @param int $taskId Task ID
+ * @param int $companyId Company ID
+ * @return bool Success
+ */
+function fn_crm_delete_task($taskId, $companyId) {
+    $query = "DELETE FROM crm_tasks WHERE task_id = ? AND company_id = ?";
+    return fn_core_delete_row_no_redirect($query, [$taskId, $companyId]);
+}
+
+/**
+ * Toggle task status (pending <-> completed)
+ *
+ * @param int $taskId Task ID
+ * @param int $companyId Company ID
+ * @return bool Success
+ */
+function fn_crm_toggle_task_status($taskId, $companyId) {
+    // Get current status
+    $task = fn_crm_get_task($taskId, $companyId);
+
+    if (!$task) {
+        return false;
+    }
+
+    $newStatus = ($task['status'] === 'completed') ? 'pending' : 'completed';
+    $completedDate = ($newStatus === 'completed') ? date('Y-m-d H:i:s') : null;
+
+    $query = "UPDATE crm_tasks SET status = ?, completed_date = ? WHERE task_id = ? AND company_id = ?";
+    return fn_core_edit_row_no_redirect($query, [$newStatus, $completedDate, $taskId, $companyId]);
+}
+
+/**
+ * Mark task as completed
+ *
+ * @param int $taskId Task ID
+ * @param int $companyId Company ID
+ * @return bool Success
+ */
+function fn_crm_complete_task($taskId, $companyId) {
+    $query = "UPDATE crm_tasks SET status = 'completed', completed_date = NOW() WHERE task_id = ? AND company_id = ?";
+    return fn_core_edit_row_no_redirect($query, [$taskId, $companyId]);
+}
+
+/**
+ * Count user tasks by status
+ *
+ * @param int $userId User ID
+ * @param string $status Status
+ * @return int Count
+ */
+function fn_crm_count_user_tasks($userId, $status) {
+    $query = "SELECT COUNT(*) as count FROM crm_tasks WHERE assigned_to = ? AND status = ?";
+    $result = fn_core_database_row($query, [$userId, $status]);
+    return $result['count'] ?? 0;
+}
+
+/**
+ * Count company tasks by status
+ *
+ * @param int $companyId Company ID
+ * @param string $status Status
+ * @return int Count
+ */
+function fn_crm_count_company_tasks($companyId, $status) {
+    $query = "SELECT COUNT(*) as count FROM crm_tasks WHERE company_id = ? AND status = ?";
+    $result = fn_core_database_row($query, [$companyId, $status]);
+    return $result['count'] ?? 0;
+}
+
+/**
+ * Count overdue tasks
+ *
+ * @param int $companyId Company ID
+ * @return int Count
+ */
+function fn_crm_count_overdue_tasks($companyId) {
+    $query = "SELECT COUNT(*) as count FROM crm_tasks
+              WHERE company_id = ?
+              AND status = 'pending'
+              AND due_date < CURDATE()";
+    $result = fn_core_database_row($query, [$companyId]);
+    return $result['count'] ?? 0;
+}
+
+/**
+ * Get overdue tasks
+ *
+ * @param int $companyId Company ID
+ * @return array Overdue tasks
+ */
+function fn_crm_get_overdue_tasks($companyId) {
+    $query = "SELECT t.*, l.first_name as lead_first_name, l.last_name as lead_last_name,
+              u.first_name as assigned_first_name, u.last_name as assigned_last_name
+              FROM crm_tasks t
+              LEFT JOIN crm_leads l ON t.lead_id = l.lead_id
+              LEFT JOIN users u ON t.assigned_to = u.user_id
+              WHERE t.company_id = ?
+              AND t.status = 'pending'
+              AND t.due_date < CURDATE()
+              ORDER BY t.due_date ASC";
+    return fn_core_database_rows($query, [$companyId]);
+}
+
+/**
+ * Get tasks for a lead
+ *
+ * @param int $leadId Lead ID
+ * @param int $companyId Company ID
+ * @return array Tasks
+ */
+function fn_crm_get_lead_tasks($leadId, $companyId) {
+    $query = "SELECT t.*, u.first_name as assigned_first_name, u.last_name as assigned_last_name
+              FROM crm_tasks t
+              LEFT JOIN users u ON t.assigned_to = u.user_id
+              WHERE t.lead_id = ? AND t.company_id = ?
+              ORDER BY t.due_date ASC, t.created_date DESC";
+    return fn_core_database_rows($query, [$leadId, $companyId]);
+}
+
+/**
+ * Get upcoming tasks for a user
+ *
+ * @param int $userId User ID
+ * @param int $days Number of days ahead
+ * @return array Tasks
+ */
+function fn_crm_get_upcoming_tasks($userId, $days = 7) {
+    $query = "SELECT t.*, l.first_name as lead_first_name, l.last_name as lead_last_name
+              FROM crm_tasks t
+              LEFT JOIN crm_leads l ON t.lead_id = l.lead_id
+              WHERE t.assigned_to = ?
+              AND t.status = 'pending'
+              AND t.due_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)
+              ORDER BY t.due_date ASC";
+    return fn_core_database_rows($query, [$userId, $days]);
+}

@@ -548,3 +548,163 @@ function fn_vehicles_generate_csv_template() {
 
     return $output;
 }
+
+/**
+ * ====================
+ * VEHICLE IMAGES
+ * ====================
+ */
+
+/**
+ * Get all images for a vehicle
+ *
+ * @param int $vehicleId Vehicle ID
+ * @return array Images
+ */
+function fn_vehicle_images_get_all($vehicleId) {
+    $query = "SELECT * FROM vehicle_images WHERE vehicle_id = ? ORDER BY is_primary DESC, image_order ASC";
+    return fn_core_database_rows($query, [$vehicleId]);
+}
+
+/**
+ * Add image to vehicle
+ *
+ * @param int $vehicleId Vehicle ID
+ * @param string $imageUrl Image URL
+ * @param bool $isPrimary Is primary image
+ * @param int $imageOrder Display order
+ * @return int|false Image ID or false
+ */
+function fn_vehicle_image_add($vehicleId, $imageUrl, $isPrimary = false, $imageOrder = 0) {
+    // If setting as primary, unset other primary images
+    if ($isPrimary) {
+        $query = "UPDATE vehicle_images SET is_primary = 0 WHERE vehicle_id = ?";
+        fn_core_edit_row_no_redirect($query, [$vehicleId]);
+    }
+
+    $query = "INSERT INTO vehicle_images (vehicle_id, image_url, image_order, is_primary) VALUES (?, ?, ?, ?)";
+    return fn_core_insert_row_no_redirect($query, [$vehicleId, $imageUrl, $imageOrder, $isPrimary ? 1 : 0]);
+}
+
+/**
+ * Delete vehicle image
+ *
+ * @param int $imageId Image ID
+ * @param int $vehicleId Vehicle ID (for security)
+ * @return bool Success
+ */
+function fn_vehicle_image_delete($imageId, $vehicleId) {
+    // Get image URL to delete file
+    $image = fn_core_database_row("SELECT image_url FROM vehicle_images WHERE image_id = ? AND vehicle_id = ?", [$imageId, $vehicleId]);
+
+    if ($image) {
+        // Delete file if it exists
+        $filePath = BASE_PATH . 'public' . $image['image_url'];
+        if (file_exists($filePath)) {
+            @unlink($filePath);
+        }
+
+        // Delete from database
+        $query = "DELETE FROM vehicle_images WHERE image_id = ? AND vehicle_id = ?";
+        return fn_core_edit_row_no_redirect($query, [$imageId, $vehicleId]);
+    }
+
+    return false;
+}
+
+/**
+ * Set image as primary
+ *
+ * @param int $imageId Image ID
+ * @param int $vehicleId Vehicle ID
+ * @return bool Success
+ */
+function fn_vehicle_image_set_primary($imageId, $vehicleId) {
+    // Unset all primary images for this vehicle
+    $query = "UPDATE vehicle_images SET is_primary = 0 WHERE vehicle_id = ?";
+    fn_core_edit_row_no_redirect($query, [$vehicleId]);
+
+    // Set new primary
+    $query = "UPDATE vehicle_images SET is_primary = 1 WHERE image_id = ? AND vehicle_id = ?";
+    return fn_core_edit_row_no_redirect($query, [$imageId, $vehicleId]);
+}
+
+/**
+ * Reorder vehicle images
+ *
+ * @param int $vehicleId Vehicle ID
+ * @param array $imageOrder Array of image IDs in desired order
+ * @return bool Success
+ */
+function fn_vehicle_images_reorder($vehicleId, $imageOrder) {
+    foreach ($imageOrder as $order => $imageId) {
+        $query = "UPDATE vehicle_images SET image_order = ? WHERE image_id = ? AND vehicle_id = ?";
+        fn_core_edit_row_no_redirect($query, [$order, $imageId, $vehicleId]);
+    }
+    return true;
+}
+
+/**
+ * Upload and save vehicle image
+ *
+ * @param int $vehicleId Vehicle ID
+ * @param array $file $_FILES array element
+ * @param bool $isPrimary Set as primary image
+ * @return array|false Array with success, image_id, image_url or false
+ */
+function fn_vehicle_image_upload($vehicleId, $file, $isPrimary = false) {
+    // Validate file
+    if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+        return ['success' => false, 'error' => 'No file uploaded'];
+    }
+
+    // Check file type
+    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    $fileType = mime_content_type($file['tmp_name']);
+
+    if (!in_array($fileType, $allowedTypes)) {
+        return ['success' => false, 'error' => 'Invalid file type. Only JPG, PNG, GIF, and WebP allowed.'];
+    }
+
+    // Check file size (max 10MB)
+    if ($file['size'] > 10 * 1024 * 1024) {
+        return ['success' => false, 'error' => 'File too large. Maximum 10MB allowed.'];
+    }
+
+    // Create upload directory if it doesn't exist
+    $uploadDir = BASE_PATH . 'public/uploads/vehicles/';
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
+
+    // Generate unique filename
+    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $filename = 'vehicle_' . $vehicleId . '_' . time() . '_' . uniqid() . '.' . $extension;
+    $uploadPath = $uploadDir . $filename;
+    $webPath = '/uploads/vehicles/' . $filename;
+
+    // Move uploaded file
+    if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
+        // Get next order number
+        $maxOrder = fn_core_database_row("SELECT MAX(image_order) as max_order FROM vehicle_images WHERE vehicle_id = ?", [$vehicleId]);
+        $imageOrder = ($maxOrder && isset($maxOrder['max_order'])) ? $maxOrder['max_order'] + 1 : 0;
+
+        // Save to database
+        $imageId = fn_vehicle_image_add($vehicleId, $webPath, $isPrimary, $imageOrder);
+
+        if ($imageId) {
+            return [
+                'success' => true,
+                'image_id' => $imageId,
+                'image_url' => $webPath,
+                'filename' => $filename
+            ];
+        } else {
+            // Delete uploaded file if database insert failed
+            @unlink($uploadPath);
+            return ['success' => false, 'error' => 'Failed to save image to database'];
+        }
+    } else {
+        return ['success' => false, 'error' => 'Failed to move uploaded file'];
+    }
+}

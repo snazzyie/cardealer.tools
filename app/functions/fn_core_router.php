@@ -83,8 +83,8 @@ function fn_core_get_routes() {
         '/deposits/refund' => 'deposits/deposit-refund',
 
         // Communications
-        '/inbox' => 'communications/inbox',
-        '/inbox/view' => 'communications/view',
+        '/inbox' => 'inbox/inbox',
+        '/inbox/view' => 'inbox/view',
         '/email-templates' => 'communications/templates',
 
         // Customers
@@ -97,7 +97,7 @@ function fn_core_get_routes() {
         '/website/menus' => 'website/menus',
 
         // Reports
-        '/reports' => 'reports/index',
+        '/reports' => 'reports/reports',
         '/reports/sales' => 'reports/sales',
         '/reports/enquiries' => 'reports/enquiries',
         '/reports/analytics' => 'reports/analytics',
@@ -114,10 +114,11 @@ function fn_core_get_routes() {
         '/company/branding' => 'company/branding',
 
         // Subscriptions
-        '/subscriptions' => 'subscriptions/subscriptions',
-        '/subscriptions/upgrade' => 'subscriptions/upgrade',
-        '/subscriptions/checkout' => 'subscriptions/checkout',
-        '/subscriptions/cancel' => 'subscriptions/cancel',
+        '/subscriptions' => 'subscriptions/manage',
+        '/subscriptions/plans' => 'subscriptions/plans',
+        '/subscriptions/manage' => 'subscriptions/manage',
+        '/subscriptions/success' => 'subscriptions/success',
+        '/subscriptions/webhook' => 'subscriptions/webhook',
 
         // Super Admin
         '/super-admin' => 'super-admin/dashboard',

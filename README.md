@@ -49,6 +49,16 @@ A comprehensive multi-tenant car dealership management platform built with PHP. 
 - **Staff Assignment** - Assign appointments to sales staff
 - **Google Calendar Ready** - Integration placeholders included
 
+### Phase 8: Subscriptions & Billing
+- **Subscription Plans** - Starter, Professional, Enterprise tiers
+- **Stripe Integration** - Complete checkout and billing flow
+- **Usage Limits** - Vehicle and user limits per plan
+- **Trial Management** - 14-day free trial tracking
+- **Upgrade/Downgrade** - Plan switching functionality
+- **Webhook Handling** - Automatic subscription status updates
+- **Usage Dashboard** - Real-time feature usage tracking
+- **Cancellation Flow** - Self-service subscription cancellation
+
 ### Phase 9: Invoicing & Payments
 - **Sales Invoices** - Vehicle sale invoices with trade-ins, deposits, VAT
 - **Service Invoices** - Line-item service and repair invoices
@@ -64,6 +74,30 @@ A comprehensive multi-tenant car dealership management platform built with PHP. 
 - **Quick Actions** - Navigate to full enquiry/lead details
 - **Integration Ready** - Postmark, Twilio, WhatsApp placeholders
 
+### Phase 11: Finance Calculator
+- **Interactive Widget** - Real-time payment calculations on vehicle pages
+- **Amortization Formula** - Accurate monthly payment calculation
+- **Adjustable Parameters** - Deposit, APR, term length sliders
+- **Payment Breakdown** - Shows finance amount, interest, total payable
+- **Mobile Responsive** - Works on all device sizes
+
+### Phase 12: Reports & Analytics
+- **Sales Reports** - Revenue tracking with date filtering
+- **Enquiry Analytics** - Lead source and conversion tracking
+- **Lead Pipeline Stats** - Breakdown by status (new, contacted, won, lost)
+- **Popular Vehicles** - Most enquired and viewed vehicles
+- **Appointment Reports** - Scheduled, completed, cancelled stats
+- **Conversion Rates** - Win/loss percentage tracking
+- **Date Range Filtering** - Custom date range analysis
+
+### Phase 13: Super Admin Dashboard
+- **Platform Management** - Oversee all dealer companies
+- **System-Wide Stats** - Total companies, users, vehicles, leads
+- **Company Status Tracking** - Trial, active, suspended counts
+- **Trial Monitoring** - Track trial expiration dates
+- **Impersonation** - Login as company users for support
+- **Platform Health** - Overall system metrics
+
 ## 📋 Technical Stack
 
 - **Backend:** PHP 8.0+ (Procedural, no framework)
@@ -76,7 +110,7 @@ A comprehensive multi-tenant car dealership management platform built with PHP. 
 
 ## 🗄️ Database Schema
 
-26 tables including:
+27 tables including:
 - `users` - User accounts with permission levels
 - `core_company` - Dealer company profiles
 - `vehicles` - Vehicle inventory (36 fields)
@@ -89,6 +123,7 @@ A comprehensive multi-tenant car dealership management platform built with PHP. 
 - `service_invoices` - Service/repair invoices
 - `service_items` - Invoice line items
 - `vehicle_deposits` - Stripe deposit tracking
+- `subscriptions` - Stripe subscription management
 - `enquiries` - Website enquiries
 - `communications` - Unified inbox messages
 - `email_templates` - Email automation templates
@@ -140,12 +175,12 @@ Each company can customize:
 
 ## 📊 Key Metrics
 
-- **Total Files:** 50+ PHP files
-- **Lines of Code:** ~5,000+ lines
-- **Database Tables:** 26 tables
-- **Function Libraries:** 6 modules (core, company, vehicles, CRM, calendar, invoices)
-- **Admin Views:** 12 modules
-- **Public Views:** 3 pages
+- **Total Files:** 65+ PHP files
+- **Lines of Code:** ~7,500+ lines
+- **Database Tables:** 27 tables
+- **Function Libraries:** 7 modules (core, company, vehicles, CRM, calendar, invoices, subscriptions)
+- **Admin Views:** 15 modules (including reports, super admin, subscriptions)
+- **Public Views:** 4 pages (home, vehicles, detail, finance calculator)
 
 ## 🔗 Integration Ready
 

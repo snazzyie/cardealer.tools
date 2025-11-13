@@ -576,23 +576,22 @@ CREATE TABLE IF NOT EXISTS core_plans (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Subscriptions
-CREATE TABLE IF NOT EXISTS core_subscriptions (
+CREATE TABLE IF NOT EXISTS subscriptions (
     subscription_id INT AUTO_INCREMENT PRIMARY KEY,
     company_id INT NOT NULL,
-    plan_id INT NOT NULL,
-    user_id INT NOT NULL,
+    plan_id VARCHAR(50) NOT NULL,
     stripe_subscription_id VARCHAR(100),
     stripe_customer_id VARCHAR(100),
-    status ENUM('D', 'A', 'W', 'S') DEFAULT 'D',
-    current_period_start DATE,
-    current_period_end DATE,
-    active_until DATE,
-    trial_ends_at DATE,
-    canceled_at DATETIME,
+    status ENUM('active', 'trialing', 'past_due', 'cancelled', 'incomplete', 'incomplete_expired') DEFAULT 'trialing',
+    current_period_start DATETIME,
+    current_period_end DATETIME,
+    cancel_at_period_end TINYINT DEFAULT 0,
+    cancelled_at DATETIME,
     created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_date DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_company (company_id),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_stripe_subscription (stripe_subscription_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Invoices (Subscription)

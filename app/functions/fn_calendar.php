@@ -290,3 +290,356 @@ function fn_calendar_get_or_create_customer($companyId, $data) {
         $data['phone'] ?? ''
     ]);
 }
+
+/**
+ * ====================
+ * GOOGLE CALENDAR INTEGRATION
+ * ====================
+ */
+
+/**
+ * Get Google Calendar OAuth2 URL
+ *
+ * @param int $userId User ID
+ * @return string Authorization URL
+ */
+function fn_calendar_google_get_auth_url($userId) {
+    global $config;
+
+    if (!isset($config['google_calendar'])) {
+        return false;
+    }
+
+    $client = new Google_Client();
+    $client->setClientId($config['google_calendar']['client_id']);
+    $client->setClientSecret($config['google_calendar']['client_secret']);
+    $client->setRedirectUri($config['google_calendar']['redirect_uri']);
+    $client->setScopes([Google_Service_Calendar::CALENDAR]);
+    $client->setAccessType('offline');
+    $client->setPrompt('consent');
+    $client->setState($userId);
+
+    return $client->createAuthUrl();
+}
+
+/**
+ * Handle Google Calendar OAuth2 callback
+ *
+ * @param string $code Authorization code
+ * @param int $userId User ID
+ * @return bool Success
+ */
+function fn_calendar_google_handle_callback($code, $userId) {
+    global $config;
+
+    if (!isset($config['google_calendar'])) {
+        return false;
+    }
+
+    try {
+        $client = new Google_Client();
+        $client->setClientId($config['google_calendar']['client_id']);
+        $client->setClientSecret($config['google_calendar']['client_secret']);
+        $client->setRedirectUri($config['google_calendar']['redirect_uri']);
+
+        $token = $client->fetchAccessTokenWithAuthCode($code);
+
+        if (isset($token['error'])) {
+            error_log("Google Calendar OAuth error: " . $token['error']);
+            return false;
+        }
+
+        // Store tokens in database
+        $query = "UPDATE users SET
+                  google_calendar_access_token = ?,
+                  google_calendar_refresh_token = ?,
+                  google_calendar_expires_at = ?
+                  WHERE user_id = ?";
+
+        $expiresAt = date('Y-m-d H:i:s', time() + $token['expires_in']);
+
+        fn_core_edit_row_no_redirect($query, [
+            $token['access_token'],
+            $token['refresh_token'] ?? null,
+            $expiresAt,
+            $userId
+        ]);
+
+        return true;
+
+    } catch (Exception $e) {
+        error_log("Google Calendar callback error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Get Google Calendar client with fresh token
+ *
+ * @param int $userId User ID
+ * @return Google_Client|false Client or false
+ */
+function fn_calendar_google_get_client($userId) {
+    global $config;
+
+    if (!isset($config['google_calendar'])) {
+        return false;
+    }
+
+    // Get user's tokens
+    $query = "SELECT google_calendar_access_token, google_calendar_refresh_token, google_calendar_expires_at
+              FROM users WHERE user_id = ?";
+    $user = fn_core_database_row($query, [$userId]);
+
+    if (!$user || !$user['google_calendar_access_token']) {
+        return false;
+    }
+
+    try {
+        $client = new Google_Client();
+        $client->setClientId($config['google_calendar']['client_id']);
+        $client->setClientSecret($config['google_calendar']['client_secret']);
+        $client->setAccessType('offline');
+
+        // Set tokens
+        $token = [
+            'access_token' => $user['google_calendar_access_token'],
+            'refresh_token' => $user['google_calendar_refresh_token'],
+            'expires_in' => strtotime($user['google_calendar_expires_at']) - time()
+        ];
+
+        $client->setAccessToken($token);
+
+        // Refresh if expired
+        if ($client->isAccessTokenExpired()) {
+            if ($user['google_calendar_refresh_token']) {
+                $newToken = $client->fetchAccessTokenWithRefreshToken($user['google_calendar_refresh_token']);
+
+                if (!isset($newToken['error'])) {
+                    // Update database with new token
+                    $query = "UPDATE users SET
+                              google_calendar_access_token = ?,
+                              google_calendar_expires_at = ?
+                              WHERE user_id = ?";
+
+                    $expiresAt = date('Y-m-d H:i:s', time() + $newToken['expires_in']);
+
+                    fn_core_edit_row_no_redirect($query, [
+                        $newToken['access_token'],
+                        $expiresAt,
+                        $userId
+                    ]);
+                } else {
+                    error_log("Google Calendar token refresh error: " . $newToken['error']);
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+
+        return $client;
+
+    } catch (Exception $e) {
+        error_log("Google Calendar client error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Sync appointment to Google Calendar (create or update)
+ *
+ * @param int $appointmentId Appointment ID
+ * @param int $companyId Company ID
+ * @return bool Success
+ */
+function fn_calendar_google_sync_appointment($appointmentId, $companyId) {
+    $appointment = fn_calendar_get_appointment($appointmentId, $companyId);
+
+    if (!$appointment || !$appointment['assigned_to']) {
+        return false;
+    }
+
+    $client = fn_calendar_google_get_client($appointment['assigned_to']);
+
+    if (!$client) {
+        return false;
+    }
+
+    try {
+        $service = new Google_Service_Calendar($client);
+
+        // Prepare event data
+        $event = new Google_Service_Calendar_Event([
+            'summary' => fn_calendar_get_event_title($appointment),
+            'description' => fn_calendar_get_event_description($appointment),
+            'location' => $appointment['location'] ?? '',
+            'start' => [
+                'dateTime' => $appointment['start_datetime'],
+                'timeZone' => 'Europe/Dublin',
+            ],
+            'end' => [
+                'dateTime' => $appointment['end_datetime'],
+                'timeZone' => 'Europe/Dublin',
+            ],
+            'reminders' => [
+                'useDefault' => false,
+                'overrides' => [
+                    ['method' => 'email', 'minutes' => 24 * 60],
+                    ['method' => 'popup', 'minutes' => 30],
+                ],
+            ],
+        ]);
+
+        // Add attendees if customer email exists
+        if (!empty($appointment['customer_email'])) {
+            $event->setAttendees([
+                ['email' => $appointment['customer_email']]
+            ]);
+        }
+
+        if ($appointment['google_calendar_event_id']) {
+            // Update existing event
+            $updatedEvent = $service->events->update('primary', $appointment['google_calendar_event_id'], $event);
+        } else {
+            // Create new event
+            $createdEvent = $service->events->insert('primary', $event);
+
+            // Save Google Calendar event ID
+            $query = "UPDATE calendar_appointments SET
+                      google_calendar_event_id = ?,
+                      google_calendar_synced = 1,
+                      last_synced = NOW()
+                      WHERE appointment_id = ? AND company_id = ?";
+
+            fn_core_edit_row_no_redirect($query, [
+                $createdEvent->getId(),
+                $appointmentId,
+                $companyId
+            ]);
+        }
+
+        // Mark as synced
+        $query = "UPDATE calendar_appointments SET google_calendar_synced = 1, last_synced = NOW()
+                  WHERE appointment_id = ? AND company_id = ?";
+        fn_core_edit_row_no_redirect($query, [$appointmentId, $companyId]);
+
+        return true;
+
+    } catch (Exception $e) {
+        error_log("Google Calendar sync error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Delete event from Google Calendar
+ *
+ * @param string $eventId Google Calendar event ID
+ * @param int $userId User ID
+ * @return bool Success
+ */
+function fn_calendar_google_delete_event($eventId, $userId) {
+    $client = fn_calendar_google_get_client($userId);
+
+    if (!$client) {
+        return false;
+    }
+
+    try {
+        $service = new Google_Service_Calendar($client);
+        $service->events->delete('primary', $eventId);
+        return true;
+
+    } catch (Exception $e) {
+        error_log("Google Calendar delete error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Get event title for Google Calendar
+ *
+ * @param array $appointment Appointment data
+ * @return string Title
+ */
+function fn_calendar_get_event_title($appointment) {
+    $typeLabels = [
+        'test-drive' => 'Test Drive',
+        'service' => 'Service Appointment',
+        'consultation' => 'Sales Consultation',
+        'vehicle-viewing' => 'Vehicle Viewing',
+        'other' => 'Appointment'
+    ];
+
+    $type = $typeLabels[$appointment['appointment_type']] ?? 'Appointment';
+
+    if ($appointment['customer_first_name']) {
+        $title = $type . ' - ' . $appointment['customer_first_name'] . ' ' . $appointment['customer_last_name'];
+    } else {
+        $title = $type;
+    }
+
+    if ($appointment['make'] && $appointment['model']) {
+        $title .= ' (' . $appointment['year'] . ' ' . $appointment['make'] . ' ' . $appointment['model'] . ')';
+    }
+
+    return $title;
+}
+
+/**
+ * Get event description for Google Calendar
+ *
+ * @param array $appointment Appointment data
+ * @return string Description
+ */
+function fn_calendar_get_event_description($appointment) {
+    $description = [];
+
+    if ($appointment['customer_email']) {
+        $description[] = 'Email: ' . $appointment['customer_email'];
+    }
+
+    if ($appointment['customer_phone']) {
+        $description[] = 'Phone: ' . $appointment['customer_phone'];
+    }
+
+    if ($appointment['make'] && $appointment['model']) {
+        $description[] = 'Vehicle: ' . $appointment['year'] . ' ' . $appointment['make'] . ' ' . $appointment['model'];
+    }
+
+    if ($appointment['notes']) {
+        $description[] = "\nNotes: " . $appointment['notes'];
+    }
+
+    return implode("\n", $description);
+}
+
+/**
+ * Check if user has Google Calendar connected
+ *
+ * @param int $userId User ID
+ * @return bool Connected
+ */
+function fn_calendar_google_is_connected($userId) {
+    $query = "SELECT google_calendar_access_token FROM users WHERE user_id = ?";
+    $user = fn_core_database_row($query, [$userId]);
+
+    return !empty($user['google_calendar_access_token']);
+}
+
+/**
+ * Disconnect Google Calendar
+ *
+ * @param int $userId User ID
+ * @return bool Success
+ */
+function fn_calendar_google_disconnect($userId) {
+    $query = "UPDATE users SET
+              google_calendar_access_token = NULL,
+              google_calendar_refresh_token = NULL,
+              google_calendar_expires_at = NULL
+              WHERE user_id = ?";
+
+    return fn_core_edit_row_no_redirect($query, [$userId]);
+}

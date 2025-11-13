@@ -57,16 +57,16 @@ function fn_core_get_routes() {
         '/calendar' => 'calendar/calendar',
         '/calendar/new' => 'calendar/appointment-new',
         '/calendar/edit' => 'calendar/appointment-edit',
-        '/calendar/callback' => 'calendar/google-callback',
+        '/calendar/google-connect' => 'calendar/google-connect',
+        '/calendar/google-callback' => 'calendar/google-callback',
 
         // Enquiries
         '/enquiries' => 'enquiries/enquiries',
         '/enquiries/view' => 'enquiries/enquiries-view',
         '/enquiries/update-status' => 'enquiries/enquiries-update-status',
 
-        // Finance Applications
-        '/finance-applications' => 'finance/applications',
-        '/finance-applications/view' => 'finance/applications-view',
+        // Finance Partners
+        '/finance-partners' => 'finance/finance-partners',
 
         // Invoices
         '/invoices' => 'invoices/invoices',

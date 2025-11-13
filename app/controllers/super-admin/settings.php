@@ -97,7 +97,7 @@ $setting_groups = [
 
 // Get platform statistics
 $platform_stats = [
-    'total_companies' => fn_core_database_row("SELECT COUNT(*) as total FROM companies", [])['total'] ?? 0,
+    'total_companies' => fn_core_database_row("SELECT COUNT(*) as total FROM core_company", [])['total'] ?? 0,
     'active_companies' => fn_core_database_row(
         "SELECT COUNT(DISTINCT s.company_id) as total FROM subscriptions s WHERE s.status = 'active'",
         []
@@ -105,19 +105,33 @@ $platform_stats = [
     'total_users' => fn_core_database_row("SELECT COUNT(*) as total FROM users", [])['total'] ?? 0,
     'total_vehicles' => fn_core_database_row("SELECT COUNT(*) as total FROM vehicles", [])['total'] ?? 0,
     'total_leads' => fn_core_database_row("SELECT COUNT(*) as total FROM crm_leads", [])['total'] ?? 0,
-    'total_revenue' => fn_core_database_row(
-        "SELECT SUM(sp.price) as total
-         FROM subscriptions s
-         JOIN subscription_plans sp ON s.plan_id = sp.plan_id
-         WHERE s.status = 'active'",
-        []
-    )['total'] ?? 0
+    'total_revenue' => 0
 ];
+
+// Calculate total revenue from active subscriptions
+$activeSubscriptions = fn_core_database_rows(
+    "SELECT plan_id FROM subscriptions WHERE status = 'active'",
+    []
+);
+
+$plans = fn_subscriptions_get_plans();
+$plansById = [];
+foreach ($plans as $plan) {
+    $plansById[$plan['plan_id']] = $plan;
+}
+
+$totalRevenue = 0;
+foreach ($activeSubscriptions as $sub) {
+    if (isset($plansById[$sub['plan_id']])) {
+        $totalRevenue += $plansById[$sub['plan_id']]['price'];
+    }
+}
+$stats['total_revenue'] = $totalRevenue;
 
 // Get recent signups
 $recent_signups = fn_core_database_rows(
     "SELECT c.company_id, c.company_name, c.created_date, u.first_name, u.last_name, u.email
-     FROM companies c
+     FROM core_company c
      LEFT JOIN users u ON c.company_id = u.company_id AND u.user_type = 2
      ORDER BY c.created_date DESC
      LIMIT 10",

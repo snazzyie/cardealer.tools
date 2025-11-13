@@ -26,14 +26,13 @@ $query = "SELECT
     COUNT(DISTINCT v.vehicle_id) as vehicle_count,
     COUNT(DISTINCT l.lead_id) as lead_count,
     s.status as subscription_status,
-    s.trial_ends_at,
-    sp.plan_name
-FROM companies c
+    s.plan_id as subscription_plan_id,
+    s.trial_ends_at
+FROM core_company c
 LEFT JOIN users u ON c.company_id = u.company_id AND u.status = 'active'
 LEFT JOIN vehicles v ON c.company_id = v.company_id
 LEFT JOIN crm_leads l ON c.company_id = l.company_id
 LEFT JOIN subscriptions s ON c.company_id = s.company_id
-LEFT JOIN subscription_plans sp ON s.plan_id = sp.plan_id
 WHERE 1=1";
 
 $params = [];
@@ -63,9 +62,25 @@ $query .= " ORDER BY c.created_date DESC";
 
 $dealers = fn_core_database_rows($query, $params);
 
+// Add plan names to dealers
+$plans = fn_subscriptions_get_plans();
+$plansMap = [];
+foreach ($plans as $plan) {
+    $plansMap[$plan['plan_id']] = $plan['name'];
+}
+
+foreach ($dealers as &$dealer) {
+    if (!empty($dealer['subscription_plan_id'])) {
+        $dealer['plan_name'] = $plansMap[$dealer['subscription_plan_id']] ?? 'Unknown';
+    } else {
+        $dealer['plan_name'] = 'No Plan';
+    }
+}
+unset($dealer);
+
 // Get platform stats
 $stats = [
-    'total_dealers' => fn_core_database_row("SELECT COUNT(*) as total FROM companies", [])['total'] ?? 0,
+    'total_dealers' => fn_core_database_row("SELECT COUNT(*) as total FROM core_company", [])['total'] ?? 0,
     'active_subscriptions' => fn_core_database_row(
         "SELECT COUNT(DISTINCT company_id) as total FROM subscriptions WHERE status = 'active'",
         []
@@ -76,14 +91,27 @@ $stats = [
     )['total'] ?? 0,
     'total_users' => fn_core_database_row("SELECT COUNT(*) as total FROM users WHERE status = 'active'", [])['total'] ?? 0,
     'total_vehicles' => fn_core_database_row("SELECT COUNT(*) as total FROM vehicles", [])['total'] ?? 0,
-    'mrr' => fn_core_database_row(
-        "SELECT SUM(sp.price) as total
-         FROM subscriptions s
-         JOIN subscription_plans sp ON s.plan_id = sp.plan_id
-         WHERE s.status = 'active' AND sp.billing_period = 'monthly'",
-        []
-    )['total'] ?? 0
+    'mrr' => 0
 ];
+
+// Calculate MRR from active subscriptions
+$activeSubscriptions = fn_core_database_rows(
+    "SELECT plan_id FROM subscriptions WHERE status = 'active'",
+    []
+);
+
+$plansById = [];
+foreach ($plans as $plan) {
+    $plansById[$plan['plan_id']] = $plan;
+}
+
+$mrr = 0;
+foreach ($activeSubscriptions as $sub) {
+    if (isset($plansById[$sub['plan_id']]) && $plansById[$sub['plan_id']]['interval'] === 'month') {
+        $mrr += $plansById[$sub['plan_id']]['price'];
+    }
+}
+$stats['mrr'] = $mrr;
 
 // Page header data
 $page_header = [

@@ -75,15 +75,21 @@ $users = fn_core_database_rows(
 );
 
 // Get subscription info
-$subscription = fn_core_database_row(
-    "SELECT s.*, sp.plan_name, sp.price, sp.billing_period, sp.features
-     FROM subscriptions s
-     LEFT JOIN subscription_plans sp ON s.plan_id = sp.plan_id
-     WHERE s.company_id = ?
-     ORDER BY s.created_date DESC
-     LIMIT 1",
-    [$view_company_id]
-);
+$subscription = fn_subscriptions_get_subscription($view_company_id);
+
+// Get plan details from hardcoded plans
+if ($subscription) {
+    $plans = fn_subscriptions_get_plans();
+    foreach ($plans as $plan) {
+        if ($plan['plan_id'] === $subscription['plan_id']) {
+            $subscription['plan_name'] = $plan['name'];
+            $subscription['price'] = $plan['price'];
+            $subscription['billing_period'] = $plan['interval'];
+            $subscription['features'] = $plan['features'];
+            break;
+        }
+    }
+}
 
 // Get company stats
 $stats = [

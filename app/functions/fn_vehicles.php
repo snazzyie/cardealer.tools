@@ -337,20 +337,6 @@ function fn_vehicles_mark_sold($vehicleId, $companyId) {
 }
 
 /**
- * Helper function for delete_row without redirect
- */
-function fn_core_delete_row_no_redirect($query, $params) {
-    try {
-        $db = fn_core_database_connection();
-        $stmt = $db->prepare($query);
-        return $stmt->execute($params);
-    } catch (PDOException $e) {
-        error_log("Database error: " . $e->getMessage());
-        return false;
-    }
-}
-
-/**
  * ====================
  * CSV IMPORT
  * ====================

@@ -285,17 +285,3 @@ function fn_company_get_users($companyId) {
               ORDER BY user_type DESC, created_date ASC";
     return fn_core_database_rows($query, [$companyId]);
 }
-
-/**
- * Helper function for edit_row without redirect
- */
-function fn_core_edit_row_no_redirect($query, $params) {
-    try {
-        $db = fn_core_database_connection();
-        $stmt = $db->prepare($query);
-        return $stmt->execute($params);
-    } catch (PDOException $e) {
-        error_log("Database error: " . $e->getMessage());
-        return false;
-    }
-}

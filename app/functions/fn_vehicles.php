@@ -349,3 +349,216 @@ function fn_core_delete_row_no_redirect($query, $params) {
         return false;
     }
 }
+
+/**
+ * ====================
+ * CSV IMPORT
+ * ====================
+ */
+
+/**
+ * Import vehicles from CSV file
+ *
+ * @param string $filePath Path to CSV file
+ * @param int $companyId Company ID
+ * @return array Import results
+ */
+function fn_vehicles_import_csv($filePath, $companyId) {
+    $results = [
+        'success' => false,
+        'imported' => 0,
+        'skipped' => 0,
+        'errors' => [],
+        'error' => ''
+    ];
+
+    if (!file_exists($filePath)) {
+        $results['error'] = 'File not found';
+        return $results;
+    }
+
+    try {
+        $file = fopen($filePath, 'r');
+
+        if (!$file) {
+            $results['error'] = 'Could not open file';
+            return $results;
+        }
+
+        // Read header row
+        $header = fgetcsv($file);
+
+        if (!$header) {
+            $results['error'] = 'Invalid CSV file - no header row';
+            fclose($file);
+            return $results;
+        }
+
+        // Expected columns (flexible mapping)
+        $columnMap = fn_vehicles_get_csv_column_map($header);
+
+        $lineNumber = 1;
+
+        // Read data rows
+        while (($row = fgetcsv($file)) !== false) {
+            $lineNumber++;
+
+            try {
+                $vehicleData = fn_vehicles_map_csv_row($row, $columnMap);
+
+                // Validate required fields
+                if (empty($vehicleData['make']) || empty($vehicleData['model']) || empty($vehicleData['price'])) {
+                    $results['skipped']++;
+                    $results['errors'][] = "Line {$lineNumber}: Missing required fields (make, model, price)";
+                    continue;
+                }
+
+                // Create vehicle
+                $vehicleId = fn_vehicles_create($companyId, $vehicleData);
+
+                if ($vehicleId) {
+                    $results['imported']++;
+                } else {
+                    $results['skipped']++;
+                    $results['errors'][] = "Line {$lineNumber}: Failed to create vehicle";
+                }
+
+            } catch (Exception $e) {
+                $results['skipped']++;
+                $results['errors'][] = "Line {$lineNumber}: " . $e->getMessage();
+            }
+        }
+
+        fclose($file);
+
+        $results['success'] = true;
+
+        return $results;
+
+    } catch (Exception $e) {
+        $results['error'] = $e->getMessage();
+        return $results;
+    }
+}
+
+/**
+ * Map CSV header to column indexes
+ *
+ * @param array $header Header row
+ * @return array Column map
+ */
+function fn_vehicles_get_csv_column_map($header) {
+    $map = [];
+
+    // Normalize header values
+    $header = array_map('strtolower', $header);
+    $header = array_map('trim', $header);
+
+    // Map common column names
+    $mappings = [
+        'make' => ['make', 'manufacturer', 'brand'],
+        'model' => ['model'],
+        'year' => ['year', 'reg_year', 'registration_year'],
+        'registration' => ['registration', 'reg', 'reg_number', 'plate'],
+        'price' => ['price', 'sale_price', 'retail_price'],
+        'mileage' => ['mileage', 'odometer', 'miles', 'km'],
+        'fuel_type' => ['fuel', 'fuel_type', 'fueltype'],
+        'transmission' => ['transmission', 'gearbox'],
+        'body_type' => ['body_type', 'bodytype', 'body', 'type'],
+        'color' => ['color', 'colour', 'exterior_color'],
+        'doors' => ['doors', 'door_count'],
+        'seats' => ['seats', 'seat_count'],
+        'engine_size' => ['engine_size', 'engine', 'cc'],
+        'vin' => ['vin', 'chassis', 'chassis_number'],
+        'description' => ['description', 'desc', 'details']
+    ];
+
+    foreach ($mappings as $field => $aliases) {
+        foreach ($aliases as $alias) {
+            $index = array_search($alias, $header);
+            if ($index !== false) {
+                $map[$field] = $index;
+                break;
+            }
+        }
+    }
+
+    return $map;
+}
+
+/**
+ * Map CSV row to vehicle data
+ *
+ * @param array $row CSV row
+ * @param array $columnMap Column map
+ * @return array Vehicle data
+ */
+function fn_vehicles_map_csv_row($row, $columnMap) {
+    $data = [];
+
+    if (isset($columnMap['make'])) $data['make'] = trim($row[$columnMap['make']]);
+    if (isset($columnMap['model'])) $data['model'] = trim($row[$columnMap['model']]);
+    if (isset($columnMap['year'])) $data['year'] = intval($row[$columnMap['year']]);
+    if (isset($columnMap['registration'])) $data['registration'] = trim($row[$columnMap['registration']]);
+    if (isset($columnMap['price'])) {
+        $price = preg_replace('/[^0-9.]/', '', $row[$columnMap['price']]);
+        $data['price'] = floatval($price);
+    }
+    if (isset($columnMap['mileage'])) {
+        $mileage = preg_replace('/[^0-9]/', '', $row[$columnMap['mileage']]);
+        $data['mileage'] = intval($mileage);
+    }
+    if (isset($columnMap['fuel_type'])) {
+        $fuelType = strtolower(trim($row[$columnMap['fuel_type']]));
+        $validFuels = ['petrol', 'diesel', 'electric', 'hybrid', 'plug-in-hybrid'];
+        $data['fuel_type'] = in_array($fuelType, $validFuels) ? $fuelType : 'petrol';
+    }
+    if (isset($columnMap['transmission'])) {
+        $transmission = strtolower(trim($row[$columnMap['transmission']]));
+        $validTrans = ['manual', 'automatic', 'semi-automatic'];
+        $data['transmission'] = in_array($transmission, $validTrans) ? $transmission : 'manual';
+    }
+    if (isset($columnMap['body_type'])) {
+        $bodyType = strtolower(trim($row[$columnMap['body_type']]));
+        $validBodies = ['saloon', 'suv', 'hatchback', 'coupe', 'estate', 'van', 'mpv', 'pickup'];
+        $data['body_type'] = in_array($bodyType, $validBodies) ? $bodyType : 'saloon';
+    }
+    if (isset($columnMap['color'])) $data['exterior_color'] = trim($row[$columnMap['color']]);
+    if (isset($columnMap['doors'])) $data['doors'] = intval($row[$columnMap['doors']]);
+    if (isset($columnMap['seats'])) $data['seats'] = intval($row[$columnMap['seats']]);
+    if (isset($columnMap['engine_size'])) $data['engine_size'] = intval($row[$columnMap['engine_size']]);
+    if (isset($columnMap['vin'])) $data['vin'] = trim($row[$columnMap['vin']]);
+    if (isset($columnMap['description'])) $data['description'] = trim($row[$columnMap['description']]);
+
+    // Defaults for required fields if missing
+    if (!isset($data['fuel_type'])) $data['fuel_type'] = 'petrol';
+    if (!isset($data['transmission'])) $data['transmission'] = 'manual';
+    if (!isset($data['body_type'])) $data['body_type'] = 'saloon';
+    if (!isset($data['status'])) $data['status'] = 'available';
+
+    return $data;
+}
+
+/**
+ * Generate CSV template for download
+ *
+ * @return string CSV content
+ */
+function fn_vehicles_generate_csv_template() {
+    $headers = [
+        'Make', 'Model', 'Year', 'Registration', 'Price', 'Mileage',
+        'Fuel_Type', 'Transmission', 'Body_Type', 'Color', 'Doors', 'Seats',
+        'Engine_Size', 'VIN', 'Description'
+    ];
+
+    $sampleData = [
+        'BMW', 'X5', '2020', '201-D-12345', '45000', '35000',
+        'Diesel', 'Automatic', 'SUV', 'Black', '5', '7',
+        '3000', 'WBA1234567890', 'Excellent condition, full service history'
+    ];
+
+    $output = implode(',', $headers) . "\n";
+    $output .= implode(',', $sampleData) . "\n";
+
+    return $output;
+}

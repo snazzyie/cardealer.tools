@@ -44,6 +44,7 @@ require BASE_PATH . 'app/functions/fn_crm.php';
 require BASE_PATH . 'app/functions/fn_calendar.php';
 require BASE_PATH . 'app/functions/fn_invoices.php';
 require BASE_PATH . 'app/functions/fn_subscriptions.php';
+require BASE_PATH . 'app/functions/fn_communications.php';
 
 // Initialize session
 fn_core_session_initialise_session();

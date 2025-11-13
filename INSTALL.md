@@ -198,8 +198,8 @@ mysql -u cardealer_user -p cardealer_saas
 
 ```sql
 -- Create company
-INSERT INTO core_company (company_name, company_email, subdomain, trial_start, trial_end, status, created_date)
-VALUES ('Platform Admin', 'admin@yourdomain.com', 'admin', NOW(), DATE_ADD(NOW(), INTERVAL 365 DAY), 'active', NOW());
+INSERT INTO core_company (company_name, company_email, subdomain, status, trial_ends_at, created_date)
+VALUES ('Platform Admin', 'admin@yourdomain.com', 'admin', 'active', DATE_ADD(NOW(), INTERVAL 365 DAY), NOW());
 
 -- Create super admin (replace PASTE_HASH_HERE with hash from above)
 INSERT INTO users (company_id, email, password_hash, first_name, last_name, user_type, permission_level, created_date)
@@ -207,6 +207,7 @@ VALUES (1, 'admin@yourdomain.com', 'PASTE_HASH_HERE', 'Admin', 'User', 3, 10, NO
 
 -- Verify
 SELECT user_id, email, first_name, last_name, permission_level FROM users;
+SELECT company_id, company_name, status, trial_ends_at FROM core_company;
 ```
 
 ---

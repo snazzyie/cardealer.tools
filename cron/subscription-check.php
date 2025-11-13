@@ -22,10 +22,10 @@ echo "=== Subscription Check Cron Started ===\n";
 echo "Time: " . date('Y-m-d H:i:s') . "\n\n";
 
 // Check for expired trials
-$query = "SELECT company_id, company_name, company_email, trial_end
+$query = "SELECT company_id, company_name, company_email, trial_ends_at
           FROM core_company
           WHERE status = 'trial'
-          AND trial_end < NOW()";
+          AND trial_ends_at < NOW()";
 
 $expiredTrials = fn_core_database_rows($query);
 
@@ -41,21 +41,21 @@ foreach ($expiredTrials as $company) {
 
     fn_email_send_postmark($company['company_email'], $subject, $htmlBody, $textBody, $company['company_id']);
 
-    echo "✓ Suspended: {$company['company_name']} (trial ended " . $company['trial_end'] . ")\n";
+    echo "✓ Suspended: {$company['company_name']} (trial ended " . $company['trial_ends_at'] . ")\n";
 }
 
 // Check for trials expiring soon (3 days)
-$query = "SELECT company_id, company_name, company_email, trial_end
+$query = "SELECT company_id, company_name, company_email, trial_ends_at
           FROM core_company
           WHERE status = 'trial'
-          AND trial_end BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 3 DAY)
+          AND trial_ends_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 3 DAY)
           AND (last_trial_reminder IS NULL OR last_trial_reminder < DATE_SUB(NOW(), INTERVAL 1 DAY))";
 
 $expiringSoon = fn_core_database_rows($query);
 
 foreach ($expiringSoon as $company) {
     // Send reminder email
-    $daysLeft = ceil((strtotime($company['trial_end']) - time()) / 86400);
+    $daysLeft = ceil((strtotime($company['trial_ends_at']) - time()) / 86400);
     $subject = "Your Trial Ends in {$daysLeft} Days - {$company['company_name']}";
     $htmlBody = "<h2>Trial Ending Soon</h2><p>Your trial ends in {$daysLeft} days. Upgrade now to avoid interruption.</p>";
     $textBody = "Your trial ends in {$daysLeft} days. Upgrade now!";

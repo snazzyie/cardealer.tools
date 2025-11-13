@@ -22,50 +22,52 @@ $success = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Basic validation
     $title = trim($_POST['title'] ?? '');
-    $customerName = trim($_POST['customer_name'] ?? '');
-    $startDate = $_POST['start_date'] ?? '';
-    $startTime = $_POST['start_time'] ?? '';
+    $customerEmail = trim($_POST['customer_email'] ?? '');
+    $customerPhone = trim($_POST['customer_phone'] ?? '');
+    $appointmentDate = $_POST['appointment_date'] ?? '';
+    $appointmentTime = $_POST['appointment_time'] ?? '';
 
     if (empty($title)) {
         $error = 'Appointment title is required.';
-    } elseif (empty($customerName)) {
-        $error = 'Customer name is required.';
-    } elseif (empty($startDate) || empty($startTime)) {
-        $error = 'Start date and time are required.';
+    } elseif (empty($appointmentDate) || empty($appointmentTime)) {
+        $error = 'Date and time are required.';
     } else {
         // Combine date and time
-        $startDateTime = $startDate . ' ' . $startTime;
+        $startDatetime = $appointmentDate . ' ' . $appointmentTime;
 
         // Calculate end time (default 1 hour duration)
         $duration = !empty($_POST['duration']) ? intval($_POST['duration']) : 60;
-        $endDateTime = date('Y-m-d H:i:s', strtotime($startDateTime . ' +' . $duration . ' minutes'));
+        $endDatetime = date('Y-m-d H:i:s', strtotime($startDatetime . ' +' . $duration . ' minutes'));
+
+        // Get or create customer if email provided
+        $customerId = null;
+        if (!empty($customerEmail)) {
+            $customerId = fn_calendar_get_or_create_customer($company_id, [
+                'first_name' => trim($_POST['customer_first_name'] ?? ''),
+                'last_name' => trim($_POST['customer_last_name'] ?? ''),
+                'email' => $customerEmail,
+                'phone' => $customerPhone
+            ]);
+        }
 
         $data = [
-            'company_id' => $company_id,
-            'user_id' => $user_id,
-            'title' => $title,
-            'description' => trim($_POST['description'] ?? ''),
-            'customer_name' => $customerName,
-            'customer_email' => trim($_POST['customer_email'] ?? ''),
-            'customer_phone' => trim($_POST['customer_phone'] ?? ''),
-            'appointment_type' => $_POST['appointment_type'] ?? 'test_drive',
+            'customer_id' => $customerId,
             'vehicle_id' => !empty($_POST['vehicle_id']) ? intval($_POST['vehicle_id']) : null,
             'lead_id' => !empty($_POST['lead_id']) ? intval($_POST['lead_id']) : null,
-            'start_time' => $startDateTime,
-            'end_time' => $endDateTime,
-            'status' => 'scheduled',
+            'appointment_type' => $_POST['appointment_type'] ?? 'test-drive',
+            'title' => $title,
+            'description' => trim($_POST['description'] ?? ''),
             'location' => trim($_POST['location'] ?? ''),
+            'start_datetime' => $startDatetime,
+            'end_datetime' => $endDatetime,
+            'assigned_to' => $user_id,
+            'status' => 'scheduled',
             'notes' => trim($_POST['notes'] ?? '')
         ];
 
-        $new_appointment_id = fn_calendar_create_appointment($data);
+        $new_appointment_id = fn_calendar_create_appointment($company_id, $data);
 
         if ($new_appointment_id) {
-            // Send confirmation email if email provided
-            if (!empty($data['customer_email'])) {
-                fn_calendar_send_appointment_confirmation($new_appointment_id);
-            }
-
             header("Location: /calendar?created=1");
             exit;
         } else {

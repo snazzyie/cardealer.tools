@@ -135,11 +135,11 @@
                                             <div class="col-md-6 mb-3">
                                                 <label for="appointment_type" class="form-label">Appointment Type *</label>
                                                 <select class="form-select" id="appointment_type" name="appointment_type" required>
-                                                    <option value="test_drive">Test Drive</option>
+                                                    <option value="test-drive">Test Drive</option>
                                                     <option value="consultation">Consultation</option>
-                                                    <option value="viewing">Vehicle Viewing</option>
-                                                    <option value="collection">Vehicle Collection</option>
+                                                    <option value="vehicle-viewing">Vehicle Viewing</option>
                                                     <option value="service">Service</option>
+                                                    <option value="other">Other</option>
                                                 </select>
                                             </div>
                                             <div class="col-md-6 mb-3">

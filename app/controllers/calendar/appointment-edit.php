@@ -32,40 +32,48 @@ $error = null;
 $success = null;
 
 // Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['cancel_appointment'])) {
     // Basic validation
     $title = trim($_POST['title'] ?? '');
-    $customerName = trim($_POST['customer_name'] ?? '');
-    $startDate = $_POST['start_date'] ?? '';
-    $startTime = $_POST['start_time'] ?? '';
+    $appointmentDate = $_POST['appointment_date'] ?? '';
+    $appointmentTime = $_POST['appointment_time'] ?? '';
 
     if (empty($title)) {
         $error = 'Appointment title is required.';
-    } elseif (empty($customerName)) {
-        $error = 'Customer name is required.';
-    } elseif (empty($startDate) || empty($startTime)) {
-        $error = 'Start date and time are required.';
+    } elseif (empty($appointmentDate) || empty($appointmentTime)) {
+        $error = 'Date and time are required.';
     } else {
         // Combine date and time
-        $startDateTime = $startDate . ' ' . $startTime;
+        $startDatetime = $appointmentDate . ' ' . $appointmentTime;
 
         // Calculate end time
         $duration = !empty($_POST['duration']) ? intval($_POST['duration']) : 60;
-        $endDateTime = date('Y-m-d H:i:s', strtotime($startDateTime . ' +' . $duration . ' minutes'));
+        $endDatetime = date('Y-m-d H:i:s', strtotime($startDatetime . ' +' . $duration . ' minutes'));
+
+        // Get or create customer if email provided
+        $customerId = $appointment_data['customer_id'];
+        $customerEmail = trim($_POST['customer_email'] ?? '');
+        if (!empty($customerEmail)) {
+            $customerId = fn_calendar_get_or_create_customer($company_id, [
+                'first_name' => trim($_POST['customer_first_name'] ?? ''),
+                'last_name' => trim($_POST['customer_last_name'] ?? ''),
+                'email' => $customerEmail,
+                'phone' => trim($_POST['customer_phone'] ?? '')
+            ]);
+        }
 
         $data = [
-            'title' => $title,
-            'description' => trim($_POST['description'] ?? ''),
-            'customer_name' => $customerName,
-            'customer_email' => trim($_POST['customer_email'] ?? ''),
-            'customer_phone' => trim($_POST['customer_phone'] ?? ''),
-            'appointment_type' => $_POST['appointment_type'] ?? 'test_drive',
+            'customer_id' => $customerId,
             'vehicle_id' => !empty($_POST['vehicle_id']) ? intval($_POST['vehicle_id']) : null,
             'lead_id' => !empty($_POST['lead_id']) ? intval($_POST['lead_id']) : null,
-            'start_time' => $startDateTime,
-            'end_time' => $endDateTime,
-            'status' => $_POST['status'] ?? 'scheduled',
+            'appointment_type' => $_POST['appointment_type'] ?? 'test-drive',
+            'title' => $title,
+            'description' => trim($_POST['description'] ?? ''),
             'location' => trim($_POST['location'] ?? ''),
+            'start_datetime' => $startDatetime,
+            'end_datetime' => $endDatetime,
+            'assigned_to' => !empty($_POST['assigned_to']) ? intval($_POST['assigned_to']) : $appointment_data['assigned_to'],
+            'status' => $_POST['status'] ?? 'scheduled',
             'notes' => trim($_POST['notes'] ?? '')
         ];
 
@@ -75,11 +83,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success = 'Appointment updated successfully.';
             // Refresh appointment data
             $appointment_data = fn_calendar_get_appointment($appointment_id, $company_id);
-
-            // Send update notification if email provided and status changed
-            if (!empty($data['customer_email']) && $data['status'] !== $appointment_data['status']) {
-                fn_calendar_send_appointment_update($appointment_id);
-            }
         } else {
             $error = 'Failed to update appointment.';
         }

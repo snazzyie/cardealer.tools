@@ -240,7 +240,7 @@ function fn_customers_get_appointments($customerId, $companyId) {
               FROM calendar_appointments a
               LEFT JOIN vehicles v ON a.vehicle_id = v.vehicle_id
               WHERE a.customer_id = ? AND a.company_id = ?
-              ORDER BY a.appointment_date DESC, a.appointment_time DESC";
+              ORDER BY a.start_datetime DESC";
     return fn_core_database_rows($query, [$customerId, $companyId]);
 }
 

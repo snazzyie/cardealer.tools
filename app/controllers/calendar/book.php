@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $phone = trim($_POST['phone'] ?? '');
     $appointmentDate = $_POST['appointment_date'] ?? '';
     $appointmentTime = $_POST['appointment_time'] ?? '';
-    $appointmentType = $_POST['appointment_type'] ?? 'test_drive';
+    $appointmentType = $_POST['appointment_type'] ?? 'test-drive';
     $vehicleId = !empty($_POST['vehicle_id']) ? intval($_POST['vehicle_id']) : null;
     $assignedTo = !empty($_POST['assigned_to']) ? intval($_POST['assigned_to']) : null;
     $notes = trim($_POST['notes'] ?? '');
@@ -51,8 +51,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($firstName) || empty($email) || empty($phone) || empty($appointmentDate) || empty($appointmentTime)) {
         $error = 'Please fill in all required fields.';
     } else {
+        // Combine date and time into datetime strings (default 30 minute appointments)
+        $startDatetime = $appointmentDate . ' ' . $appointmentTime;
+        $endDatetime = date('Y-m-d H:i:s', strtotime($startDatetime . ' +30 minutes'));
+
+        // Generate title based on appointment type
+        $typeLabels = [
+            'test-drive' => 'Test Drive',
+            'service' => 'Service',
+            'consultation' => 'Consultation',
+            'vehicle-viewing' => 'Vehicle Viewing',
+            'other' => 'Appointment'
+        ];
+        $title = $typeLabels[$appointmentType] ?? 'Appointment';
+        $title .= ' - ' . $firstName . ' ' . $lastName;
+
         // Check availability
-        if (!fn_calendar_check_availability($company_id, $appointmentDate, $appointmentTime, 30)) {
+        if (!fn_calendar_check_availability($company_id, $startDatetime, $endDatetime)) {
             $error = 'This time slot is not available. Please choose another time.';
         } else {
             // Create or get customer
@@ -68,11 +83,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'customer_id' => $customerId,
                 'vehicle_id' => $vehicleId,
                 'appointment_type' => $appointmentType,
-                'appointment_date' => $appointmentDate,
-                'appointment_time' => $appointmentTime,
-                'duration_minutes' => 30,
+                'title' => $title,
+                'description' => $notes,
+                'location' => '',
+                'start_datetime' => $startDatetime,
+                'end_datetime' => $endDatetime,
                 'assigned_to' => $assignedTo,
-                'notes' => $notes,
+                'notes' => '',
                 'status' => 'scheduled'
             ];
 

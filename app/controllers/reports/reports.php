@@ -58,7 +58,7 @@ $query = "SELECT COUNT(*) as total_appointments,
           SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
           SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled
           FROM calendar_appointments
-          WHERE company_id = ? AND appointment_date BETWEEN ? AND ?";
+          WHERE company_id = ? AND DATE(start_datetime) BETWEEN ? AND ?";
 $appointments_report = fn_core_database_row($query, [$company_id, $start_date, $end_date]);
 
 // Conversion Rate

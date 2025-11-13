@@ -94,11 +94,11 @@
                                         <div class="row">
                                             <div class="col-md-6 mb-3">
                                                 <label for="appointment_date" class="form-label">Date *</label>
-                                                <input type="date" class="form-control" id="appointment_date" name="appointment_date" value="<?= htmlspecialchars($appointment['appointment_date']) ?>" required>
+                                                <input type="date" class="form-control" id="appointment_date" name="appointment_date" value="<?= htmlspecialchars(date('Y-m-d', strtotime($appointment['start_datetime']))) ?>" required>
                                             </div>
                                             <div class="col-md-6 mb-3">
                                                 <label for="appointment_time" class="form-label">Time *</label>
-                                                <input type="time" class="form-control" id="appointment_time" name="appointment_time" value="<?= htmlspecialchars($appointment['appointment_time']) ?>" required>
+                                                <input type="time" class="form-control" id="appointment_time" name="appointment_time" value="<?= htmlspecialchars(date('H:i', strtotime($appointment['start_datetime']))) ?>" required>
                                             </div>
                                         </div>
 

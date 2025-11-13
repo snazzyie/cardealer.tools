@@ -2,7 +2,7 @@
 // Group appointments by date
 $appointments_by_date = [];
 foreach ($appointments as $apt) {
-    $date = $apt['appointment_date'];
+    $date = date('Y-m-d', strtotime($apt['start_datetime']));
     if (!isset($appointments_by_date[$date])) {
         $appointments_by_date[$date] = [];
     }
@@ -167,7 +167,7 @@ $next_year = $month == 12 ? $year + 1 : $year;
 
                                             foreach ($day_appointments as $apt) {
                                                 $status_class = $apt['status'];
-                                                $time = date('H:i', strtotime($apt['appointment_time']));
+                                                $time = date('H:i', strtotime($apt['start_datetime']));
                                                 $title = $time . ' - ' . htmlspecialchars($apt['customer_first_name']);
                                                 echo '<div class="appointment-pill ' . $status_class . '" title="' . htmlspecialchars($title) . '">';
                                                 echo htmlspecialchars($time . ' ' . $apt['customer_first_name']);
@@ -204,8 +204,8 @@ $next_year = $month == 12 ? $year + 1 : $year;
                                                 <div class="fw-bold"><?= htmlspecialchars($apt['customer_first_name'] . ' ' . $apt['customer_last_name']) ?></div>
                                                 <small class="text-muted">
                                                     <i class="bi bi-calendar me-1"></i>
-                                                    <?= date('D, M j', strtotime($apt['appointment_date'])) ?>
-                                                    <?= date('g:i A', strtotime($apt['appointment_time'])) ?>
+                                                    <?= date('D, M j', strtotime($apt['start_datetime'])) ?>
+                                                    <?= date('g:i A', strtotime($apt['start_datetime'])) ?>
                                                 </small>
                                                 <?php if ($apt['make']): ?>
                                                     <div class="small text-muted">

@@ -27,12 +27,12 @@ function fn_calendar_get_appointments($companyId, $filters = []) {
 
     // Filter by date range
     if (!empty($filters['start_date'])) {
-        $query .= " AND a.appointment_date >= ?";
+        $query .= " AND DATE(a.start_datetime) >= ?";
         $params[] = $filters['start_date'];
     }
 
     if (!empty($filters['end_date'])) {
-        $query .= " AND a.appointment_date <= ?";
+        $query .= " AND DATE(a.start_datetime) <= ?";
         $params[] = $filters['end_date'];
     }
 
@@ -48,7 +48,7 @@ function fn_calendar_get_appointments($companyId, $filters = []) {
         $params[] = $filters['appointment_type'];
     }
 
-    $query .= " ORDER BY a.appointment_date ASC, a.appointment_time ASC";
+    $query .= " ORDER BY a.start_datetime ASC";
 
     return fn_core_database_rows($query, $params);
 }
@@ -81,24 +81,26 @@ function fn_calendar_get_appointment($appointmentId, $companyId) {
  */
 function fn_calendar_create_appointment($companyId, $data) {
     $query = "INSERT INTO calendar_appointments (
-        company_id, customer_id, vehicle_id, appointment_type,
-        appointment_date, appointment_time, duration_minutes,
-        assigned_to, location, notes, status, google_calendar_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        company_id, customer_id, lead_id, vehicle_id, appointment_type,
+        title, description, location, start_datetime, end_datetime,
+        assigned_to, status, notes, google_calendar_event_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $params = [
         $companyId,
         $data['customer_id'] ?? null,
+        $data['lead_id'] ?? null,
         $data['vehicle_id'] ?? null,
-        $data['appointment_type'] ?? 'test_drive',
-        $data['appointment_date'],
-        $data['appointment_time'],
-        $data['duration_minutes'] ?? 30,
-        $data['assigned_to'] ?? null,
+        $data['appointment_type'] ?? 'test-drive',
+        $data['title'] ?? '',
+        $data['description'] ?? '',
         $data['location'] ?? '',
-        $data['notes'] ?? '',
+        $data['start_datetime'],
+        $data['end_datetime'],
+        $data['assigned_to'] ?? null,
         $data['status'] ?? 'scheduled',
-        $data['google_calendar_id'] ?? null
+        $data['notes'] ?? '',
+        $data['google_calendar_event_id'] ?? null
     ];
 
     return fn_core_insert_row_no_redirect($query, $params);
@@ -114,22 +116,25 @@ function fn_calendar_create_appointment($companyId, $data) {
  */
 function fn_calendar_update_appointment($appointmentId, $companyId, $data) {
     $query = "UPDATE calendar_appointments SET
-        customer_id = ?, vehicle_id = ?, appointment_type = ?,
-        appointment_date = ?, appointment_time = ?, duration_minutes = ?,
-        assigned_to = ?, location = ?, notes = ?, status = ?
+        customer_id = ?, lead_id = ?, vehicle_id = ?, appointment_type = ?,
+        title = ?, description = ?, location = ?,
+        start_datetime = ?, end_datetime = ?,
+        assigned_to = ?, status = ?, notes = ?
     WHERE appointment_id = ? AND company_id = ?";
 
     $params = [
         $data['customer_id'] ?? null,
+        $data['lead_id'] ?? null,
         $data['vehicle_id'] ?? null,
-        $data['appointment_type'] ?? 'test_drive',
-        $data['appointment_date'],
-        $data['appointment_time'],
-        $data['duration_minutes'] ?? 30,
-        $data['assigned_to'] ?? null,
+        $data['appointment_type'] ?? 'test-drive',
+        $data['title'] ?? '',
+        $data['description'] ?? '',
         $data['location'] ?? '',
-        $data['notes'] ?? '',
+        $data['start_datetime'],
+        $data['end_datetime'],
+        $data['assigned_to'] ?? null,
         $data['status'] ?? 'scheduled',
+        $data['notes'] ?? '',
         $appointmentId,
         $companyId
     ];
@@ -197,24 +202,22 @@ function fn_calendar_get_upcoming($companyId, $days = 7) {
  * Check if time slot is available
  *
  * @param int $companyId Company ID
- * @param string $date Date
- * @param string $time Time
- * @param int $duration Duration in minutes
+ * @param string $startDatetime Start datetime (Y-m-d H:i:s)
+ * @param string $endDatetime End datetime (Y-m-d H:i:s)
  * @param int $excludeAppointmentId Exclude this appointment (for updates)
  * @return bool True if available
  */
-function fn_calendar_check_availability($companyId, $date, $time, $duration = 30, $excludeAppointmentId = null) {
+function fn_calendar_check_availability($companyId, $startDatetime, $endDatetime, $excludeAppointmentId = null) {
     $query = "SELECT COUNT(*) as count FROM calendar_appointments
               WHERE company_id = ?
-              AND appointment_date = ?
               AND status IN ('scheduled', 'confirmed')
               AND (
-                  (appointment_time <= ? AND DATE_ADD(CONCAT(appointment_date, ' ', appointment_time), INTERVAL duration_minutes MINUTE) > ?)
+                  (start_datetime < ? AND end_datetime > ?)
                   OR
-                  (appointment_time < DATE_ADD(?, INTERVAL ? MINUTE) AND appointment_time >= ?)
+                  (start_datetime >= ? AND start_datetime < ?)
               )";
 
-    $params = [$companyId, $date, $time, $time, $time, $duration, $time];
+    $params = [$companyId, $endDatetime, $startDatetime, $startDatetime, $endDatetime];
 
     if ($excludeAppointmentId) {
         $query .= " AND appointment_id != ?";
@@ -238,7 +241,7 @@ function fn_calendar_get_stats($companyId) {
 
     // Today's appointments
     $query = "SELECT COUNT(*) as count FROM calendar_appointments
-              WHERE company_id = ? AND appointment_date = ? AND status IN ('scheduled', 'confirmed')";
+              WHERE company_id = ? AND DATE(start_datetime) = ? AND status IN ('scheduled', 'confirmed')";
     $result = fn_core_database_row($query, [$companyId, $today]);
     $stats['today'] = $result['count'];
 
@@ -246,14 +249,14 @@ function fn_calendar_get_stats($companyId) {
     $weekStart = date('Y-m-d', strtotime('monday this week'));
     $weekEnd = date('Y-m-d', strtotime('sunday this week'));
     $query = "SELECT COUNT(*) as count FROM calendar_appointments
-              WHERE company_id = ? AND appointment_date BETWEEN ? AND ? AND status IN ('scheduled', 'confirmed')";
+              WHERE company_id = ? AND DATE(start_datetime) BETWEEN ? AND ? AND status IN ('scheduled', 'confirmed')";
     $result = fn_core_database_row($query, [$companyId, $weekStart, $weekEnd]);
     $stats['this_week'] = $result['count'];
 
     // Completed this month
     $monthStart = date('Y-m-01');
     $query = "SELECT COUNT(*) as count FROM calendar_appointments
-              WHERE company_id = ? AND appointment_date >= ? AND status = 'completed'";
+              WHERE company_id = ? AND DATE(start_datetime) >= ? AND status = 'completed'";
     $result = fn_core_database_row($query, [$companyId, $monthStart]);
     $stats['completed_month'] = $result['count'];
 

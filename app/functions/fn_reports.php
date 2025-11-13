@@ -420,7 +420,7 @@ function fn_reports_get_appointments($companyId, $startDate, $endDate) {
         SUM(CASE WHEN status = 'no_show' THEN 1 ELSE 0 END) as no_shows
     FROM calendar_appointments
     WHERE company_id = ?
-    AND appointment_date BETWEEN ? AND ?";
+    AND DATE(start_datetime) BETWEEN ? AND ?";
 
     return fn_core_database_row($query, [$companyId, $startDate, $endDate]);
 }
@@ -439,7 +439,7 @@ function fn_reports_get_appointments_by_type($companyId, $startDate, $endDate) {
         COUNT(*) as appointment_count
     FROM calendar_appointments
     WHERE company_id = ?
-    AND appointment_date BETWEEN ? AND ?
+    AND DATE(start_datetime) BETWEEN ? AND ?
     GROUP BY appointment_type
     ORDER BY appointment_count DESC";
 
@@ -523,7 +523,7 @@ function fn_reports_get_dashboard_stats($companyId) {
 
     // Today's appointments
     $appointmentsQuery = "SELECT COUNT(*) as count FROM calendar_appointments
-                          WHERE company_id = ? AND appointment_date = ? AND status IN ('scheduled', 'confirmed')";
+                          WHERE company_id = ? AND DATE(start_datetime) = ? AND status IN ('scheduled', 'confirmed')";
     $appointmentsData = fn_core_database_row($appointmentsQuery, [$companyId, $today]);
     $stats['todays_appointments'] = $appointmentsData['count'] ?? 0;
 

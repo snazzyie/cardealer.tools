@@ -15,8 +15,8 @@ function fn_core_get_routes() {
     return [
         // Public Routes
         '/' => 'public/home/index',
-        '/cars' => 'public/vehicles/search',
-        '/cars/view' => 'public/vehicles/view',
+        '/cars' => 'public/vehicles/index',
+        '/cars/view' => 'public/vehicles/detail',
         '/about' => 'public/about/index',
         '/contact' => 'public/contact/index',
         '/finance' => 'public/finance/index',
@@ -39,6 +39,7 @@ function fn_core_get_routes() {
         // Vehicles
         '/vehicles' => 'vehicles/vehicles',
         '/vehicles/new' => 'vehicles/vehicles-new',
+        '/vehicles/view' => 'vehicles/vehicles-view',
         '/vehicles/edit' => 'vehicles/vehicles-edit',
         '/vehicles/delete' => 'vehicles/vehicles-delete',
         '/vehicles/import' => 'vehicles/vehicles-import',
@@ -74,9 +75,9 @@ function fn_core_get_routes() {
         '/invoices/sales' => 'invoices/sales-invoices',
         '/invoices/sales/new' => 'invoices/sales-new',
         '/invoices/sales/view' => 'invoices/sales-view',
-        '/invoices/service' => 'invoices/service-invoices',
-        '/invoices/service/new' => 'invoices/service-new',
-        '/invoices/service/view' => 'invoices/service-view',
+        '/invoices/service' => 'service/service-invoices',
+        '/invoices/service/new' => 'service/service-invoice-form',
+        '/invoices/service/view' => 'service/service-invoice-view',
 
         // Deposits
         '/deposits' => 'deposits/deposits',
@@ -126,7 +127,7 @@ function fn_core_get_routes() {
         // Company Settings
         '/company' => 'company/company',
         '/company/edit' => 'company/company-edit',
-        '/company/branding' => 'company/branding',
+        '/company/branding' => 'company/company-branding',
 
         // Subscriptions
         '/subscriptions' => 'subscriptions/manage',
@@ -179,6 +180,46 @@ function fn_core_route($uri) {
         }
     }
 
+    // Handle path parameters (e.g., /vehicles/edit/123 -> /vehicles/edit?id=123)
+    $uri_parts = explode('/', trim($uri, '/'));
+
+    // Pattern: /resource/action/id -> /resource/action?id=X
+    if (count($uri_parts) >= 3) {
+        $base_path = '/' . $uri_parts[0] . '/' . $uri_parts[1];
+        $param_value = $uri_parts[2];
+
+        if (array_key_exists($base_path, $routes)) {
+            // Set id parameter in $_GET
+            $_GET['id'] = $param_value;
+
+            $controller = BASE_PATH . 'app/controllers/' . $routes[$base_path] . '.php';
+
+            if (file_exists($controller)) {
+                require $controller;
+                return;
+            }
+        }
+    }
+
+    // Pattern: /resource/id -> /resource/view?id=X (for view routes)
+    if (count($uri_parts) == 2 && is_numeric($uri_parts[1])) {
+        $base_path = '/' . $uri_parts[0];
+        $param_value = $uri_parts[1];
+
+        // Check if there's a view route for this resource
+        $view_path = $base_path . '/view';
+        if (array_key_exists($view_path, $routes)) {
+            $_GET['id'] = $param_value;
+
+            $controller = BASE_PATH . 'app/controllers/' . $routes[$view_path] . '.php';
+
+            if (file_exists($controller)) {
+                require $controller;
+                return;
+            }
+        }
+    }
+
     // 404 - Route not found
     header("HTTP/1.0 404 Not Found");
     if (file_exists(BASE_PATH . 'app/controllers/errors/404.php')) {
@@ -186,7 +227,8 @@ function fn_core_route($uri) {
     } else {
         echo '<h1>404 - Page Not Found</h1>';
         echo '<p>The page you are looking for does not exist.</p>';
-        echo '<p><a href="/">Return to homepage</a></p>';
+        echo '<p>URI: ' . htmlspecialchars($uri) . '</p>';
+        echo '<p><a href="/dash">Return to dashboard</a></p>';
     }
 }
 

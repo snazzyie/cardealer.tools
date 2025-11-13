@@ -40,6 +40,7 @@ require BASE_PATH . 'app/functions/fn_core_email.php';
 require BASE_PATH . 'app/functions/fn_core_stripe.php';
 require BASE_PATH . 'app/functions/fn_company.php';
 require BASE_PATH . 'app/functions/fn_vehicles.php';
+require BASE_PATH . 'app/functions/fn_crm.php';
 
 // Initialize session
 fn_core_session_initialise_session();

@@ -261,6 +261,20 @@
                                                   placeholder="Enter detailed description of the vehicle..."><?= htmlspecialchars($vehicle_data['description'] ?? '') ?></textarea>
                                     </div>
                                 </div>
+
+                                <!-- Video URL -->
+                                <div class="card border-0 shadow-sm mb-3">
+                                    <div class="card-body p-4">
+                                        <h5 class="mb-4">Video URL</h5>
+                                        <input type="url" class="form-control" name="video_url"
+                                               placeholder="YouTube or Vimeo URL (e.g., https://www.youtube.com/watch?v=...)"
+                                               value="<?= htmlspecialchars($vehicle_data['video_url'] ?? '') ?>">
+                                        <small class="text-muted mt-2 d-block">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            Paste a YouTube or Vimeo URL to display a video on the vehicle page
+                                        </small>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="col-lg-4">

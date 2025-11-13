@@ -81,6 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'nct_expiry' => !empty($_POST['nct_expiry']) ? $_POST['nct_expiry'] : null,
             'mot_expiry' => !empty($_POST['mot_expiry']) ? $_POST['mot_expiry'] : null,
             'description' => trim($_POST['description'] ?? ''),
+            'video_url' => trim($_POST['video_url'] ?? ''),
             'status' => $_POST['status'] ?? 'available',
             'is_featured' => isset($_POST['is_featured']) ? 1 : 0,
             'is_premium' => isset($_POST['is_premium']) ? 1 : 0

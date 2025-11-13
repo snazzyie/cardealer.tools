@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS vehicles (
     nct_expiry DATE,
     mot_expiry DATE,
     description TEXT,
+    video_url VARCHAR(500),
     features JSON,
     status ENUM('available', 'reserved', 'sold', 'coming-soon') DEFAULT 'available',
     is_featured TINYINT DEFAULT 0,

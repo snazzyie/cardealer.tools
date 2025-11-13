@@ -1,0 +1,22 @@
+# Car Dealer SaaS - Crontab Configuration
+# Add these lines to your crontab with: crontab -e
+# Adjust paths to match your installation directory
+
+# Stock Alerts - Run every hour to check new vehicles
+0 * * * * /usr/bin/php /path/to/cardealer.tools/cron/stock-alerts.php >> /path/to/cardealer.tools/logs/stock-alerts.log 2>&1
+
+# Subscription Check - Run daily at midnight
+0 0 * * * /usr/bin/php /path/to/cardealer.tools/cron/subscription-check.php >> /path/to/cardealer.tools/logs/subscriptions.log 2>&1
+
+# Database Backup - Run daily at 2 AM (optional but recommended)
+0 2 * * * /usr/bin/mysqldump -u DB_USER -pDB_PASS cardealer_saas | gzip > /path/to/backups/cardealer_saas_$(date +\%Y\%m\%d).sql.gz
+
+# Log Cleanup - Run weekly on Sunday at 3 AM
+0 3 * * 0 find /path/to/cardealer.tools/logs -name "*.log" -mtime +30 -delete
+
+# Notes:
+# - Replace /path/to/cardealer.tools with your actual installation path
+# - Replace DB_USER and DB_PASS with your MySQL credentials
+# - Create logs directory: mkdir -p /path/to/cardealer.tools/logs
+# - Make scripts executable: chmod +x /path/to/cardealer.tools/cron/*.php
+# - Test scripts manually first: php /path/to/cardealer.tools/cron/stock-alerts.php
